@@ -417,9 +417,23 @@ class AdInstanceManager {
         'adId': adId,
         'sizes': ad.sizes,
         'adUnitId': ad.adUnitId,
+        'manualImpressionEnabled': ad.manualImpressionEnabled,
         'request': ad.request,
       },
     );
+  }
+
+  /// Record an impression for current ad.
+  Future<void> recordImpression(AdManagerBannerAd ad) {
+    final adId = adIdFor(ad);
+    return adId == null
+        ? Future<void>.value()
+        : channel.invokeMethod<void>(
+            'recordImpression',
+            <dynamic, dynamic>{
+              'adId': adId,
+            },
+          );
   }
 
   /// Loads an ad if not currently loading or loaded.

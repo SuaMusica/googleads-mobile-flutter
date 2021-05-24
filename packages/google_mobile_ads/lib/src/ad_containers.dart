@@ -548,6 +548,7 @@ class AdManagerBannerAd extends AdWithView {
     required String adUnitId,
     required this.listener,
     required this.request,
+    this.manualImpressionEnabled = false,
   })  : assert(sizes.isNotEmpty),
         super(adUnitId: adUnitId, listener: listener);
 
@@ -565,6 +566,20 @@ class AdManagerBannerAd extends AdWithView {
   /// sizes. If multiple ad sizes are specified, the [AdManagerBannerAd] will
   /// assume the size of the first ad size until an ad is loaded.
   final List<AdSize> sizes;
+
+  /// A flag whether the SDK should record an impression automatically or the
+  /// user will record it manually.
+  final bool manualImpressionEnabled;
+
+  bool _alreadyTrackedImpression = false;
+
+  /// Method to manually record banner impression
+  Future<void> recordImpression() async {
+    if (manualImpressionEnabled && !_alreadyTrackedImpression) {
+      _alreadyTrackedImpression = true;
+      await instanceManager.recordImpression(this);
+    }
+  }
 
   @override
   Future<void> load() async {

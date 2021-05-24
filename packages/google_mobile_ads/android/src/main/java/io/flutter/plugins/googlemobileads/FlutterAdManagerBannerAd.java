@@ -32,6 +32,7 @@ import java.util.List;
 class FlutterAdManagerBannerAd extends FlutterAd implements PlatformView, FlutterDestroyableAd {
   @NonNull private final AdInstanceManager manager;
   @NonNull private final String adUnitId;
+  @NonNull private final Boolean manualImpressionEnabled;
   @NonNull private final List<FlutterAdSize> sizes;
   @NonNull private final FlutterAdManagerAdRequest request;
   @NonNull private final BannerAdCreator bannerAdCreator;
@@ -46,15 +47,18 @@ class FlutterAdManagerBannerAd extends FlutterAd implements PlatformView, Flutte
   public FlutterAdManagerBannerAd(
       @NonNull AdInstanceManager manager,
       @NonNull String adUnitId,
+      @NonNull Boolean manualImpressionEnabled,
       @NonNull List<FlutterAdSize> sizes,
       @NonNull FlutterAdManagerAdRequest request,
       @NonNull BannerAdCreator bannerAdCreator) {
     Preconditions.checkNotNull(manager);
+    Preconditions.checkNotNull(manualImpressionEnabled);
     Preconditions.checkNotNull(adUnitId);
     Preconditions.checkNotNull(sizes);
     Preconditions.checkNotNull(request);
     this.manager = manager;
     this.adUnitId = adUnitId;
+    this.manualImpressionEnabled = manualImpressionEnabled;
     this.sizes = sizes;
     this.request = request;
     this.bannerAdCreator = bannerAdCreator;
@@ -75,6 +79,9 @@ class FlutterAdManagerBannerAd extends FlutterAd implements PlatformView, Flutte
     final AdSize[] allSizes = new AdSize[sizes.size()];
     for (int i = 0; i < sizes.size(); i++) {
       allSizes[i] = sizes.get(i).getAdSize();
+    }
+    if(manualImpressionEnabled) {
+      view.setManualImpressionsEnabled(true);
     }
     view.setAdSizes(allSizes);
     view.setAdListener(

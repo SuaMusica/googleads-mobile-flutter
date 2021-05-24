@@ -339,6 +339,7 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
             new FlutterAdManagerBannerAd(
                 instanceManager,
                 call.<String>argument("adUnitId"),
+                call.<Boolean>argument("manualImpressionEnabled"),
                 call.<List<FlutterAdSize>>argument("sizes"),
                 call.<FlutterAdManagerAdRequest>argument("request"),
                 new BannerAdCreator(instanceManager.activity));
@@ -360,6 +361,10 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
         break;
       case "disposeAd":
         instanceManager.disposeAd(call.<Integer>argument("adId"));
+        result.success(null);
+        break;
+      case "recordImpression":
+        instanceManager.recordImpression(call.<Integer>argument("adId"));
         result.success(null);
         break;
       case "showAdWithoutView":

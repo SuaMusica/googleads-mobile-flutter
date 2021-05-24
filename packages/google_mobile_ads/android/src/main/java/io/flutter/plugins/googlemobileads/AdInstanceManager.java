@@ -75,6 +75,16 @@ class AdInstanceManager {
     ads.put(adId, ad);
   }
 
+  void recordImpression(int adId) {
+    if (!ads.containsKey(adId)) {
+      return;
+    }
+    Object adObject = ads.get(adId);
+    if (adObject instanceof FlutterAdManagerBannerAd) {
+      ((FlutterAdManagerBannerAd) adObject).recordImpression();
+    }
+  }
+
   void disposeAd(int adId) {
     if (!ads.containsKey(adId)) {
       return;
