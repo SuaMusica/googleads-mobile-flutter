@@ -44,8 +44,9 @@
 
 - (GADAdSize)currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *_Nonnull)width {
   return GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(width.doubleValue);
+}
 
-  - (GADAdSize)currentOrientationInlineAdaptiveBannerSizeWithWidth:(NSNumber *_Nonnull)width {
+- (GADAdSize)currentOrientationInlineAdaptiveBannerSizeWithWidth:(NSNumber *_Nonnull)width {
   return GADCurrentOrientationInlineAdaptiveBannerAdSizeWithWidth(width.floatValue);
 }
 
@@ -374,6 +375,7 @@
     if (sizes[0].size.size.width == 1){
         _bannerView.enableManualImpressions = YES;
     }
+
     NSMutableArray<NSValue *> *validAdSizes = [NSMutableArray arrayWithCapacity:sizes.count];
     for (FLTAdSize *size in sizes) {
       [validAdSizes addObject:NSValueFromGADAdSize(size.size)];
@@ -412,97 +414,7 @@
 - (void)adView:(nonnull GAMBannerView *)banner
     didReceiveAppEvent:(nonnull NSString *)name
               withInfo:(nullable NSString *)info {
-    [banner recordImpression];
-    [self.manager onAppEvent:self name:name data:info];
-}
-
-@end
-
-#pragma mark - FLTFluidGAMBannerAd
-
-@implementation FLTFluidGAMBannerAd {
-  GAMBannerView *_bannerView;
-  FLTGAMAdRequest *_adRequest;
-  UIScrollView *_containerView;
-  CGFloat _height;
-}
-
-- (instancetype)initWithAdUnitId:(NSString *_Nonnull)adUnitId
-                         request:(FLTGAMAdRequest *_Nonnull)request
-              rootViewController:(UIViewController *_Nonnull)rootViewController
-                            adId:(NSNumber *_Nonnull)adId {
-  self = [super init];
-  if (self) {
-    self.adId = adId;
-    _height = -1;
-    _adRequest = request;
-    _bannerView = [[GAMBannerView alloc] initWithAdSize:kGADAdSizeFluid];
-    _bannerView.adUnitID = adUnitId;
-    _bannerView.rootViewController = rootViewController;
-    _bannerView.appEventDelegate = self;
-    _bannerView.delegate = self;
-    _bannerView.adSizeDelegate = self;
-
-    __weak FLTFluidGAMBannerAd *weakSelf = self;
-    self.bannerView.paidEventHandler = ^(GADAdValue *_Nonnull value) {
-      if (weakSelf.manager == nil) {
-        return;
-      }
-      [weakSelf.manager onPaidEvent:weakSelf
-                              value:[[FLTAdValue alloc] initWithValue:value.value
-                                                            precision:(NSInteger)value.precision
-                                                         currencyCode:value.currencyCode]];
-    };
-  }
-  return self;
-}
-
-- (GADBannerView *_Nonnull)bannerView {
-  return _bannerView;
-}
-
-- (void)load {
-  [self.bannerView loadRequest:_adRequest.asGAMRequest];
-}
-
-#pragma mark - FlutterPlatformView
-
-- (nonnull UIView *)view {
-  if (_containerView) {
-    return _containerView;
-  }
-
-  UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
-  [scrollView setShowsHorizontalScrollIndicator:NO];
-  [scrollView setShowsVerticalScrollIndicator:NO];
-  [scrollView addSubview:_bannerView];
-
-  _bannerView.translatesAutoresizingMaskIntoConstraints = false;
-  NSLayoutConstraint *width = [NSLayoutConstraint constraintWithItem:_bannerView
-                                                           attribute:NSLayoutAttributeWidth
-                                                           relatedBy:0
-                                                              toItem:scrollView
-                                                           attribute:NSLayoutAttributeWidth
-                                                          multiplier:1.0
-                                                            constant:0];
-  [scrollView addConstraint:width];
-  _containerView = scrollView;
-  [_bannerView.widthAnchor constraintEqualToAnchor:scrollView.widthAnchor].active = YES;
-  [_bannerView.topAnchor constraintEqualToAnchor:scrollView.topAnchor].active = YES;
-  return scrollView;
-}
-
-#pragma mark - GADAdSizeDelegate
-
-- (void)adView:(GADBannerView *)bannerView willChangeAdSizeTo:(GADAdSize)adSize {
-  CGFloat height = adSize.size.height;
-  [self.manager onFluidAdHeightChanged:self height:height];
-}
-
-#pragma mark - GADAppEventDelegate
-- (void)adView:(nonnull GADBannerView *)banner
-    didReceiveAppEvent:(nonnull NSString *)name
-              withInfo:(nullable NSString *)info {
+  [banner recordImpression];
   [self.manager onAppEvent:self name:name data:info];
 }
 
