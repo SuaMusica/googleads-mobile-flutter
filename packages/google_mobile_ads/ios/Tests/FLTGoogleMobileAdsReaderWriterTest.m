@@ -132,8 +132,8 @@
   XCTAssertEqualObjects(decodedSize.orientation, inlineAdaptiveBannerSize.orientation);
 }
 
-- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize {
-  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(0, 0));
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_portraitOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(23, 34));
 
   FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
   OCMStub([factory portraitAnchoredAdaptiveBannerAdSizeWithWidth:@(23)]).andReturn(testAdSize);
@@ -142,6 +142,37 @@
       [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory
                                                  orientation:@"portrait"
                                                        width:@(23)];
+  NSData *encodedMessage = [_messageCodec encode:size];
+
+  FLTAnchoredAdaptiveBannerSize *decodedSize = [_messageCodec decode:encodedMessage];
+  XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+}
+
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_landscapeOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(34, 45));
+
+  FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
+  OCMStub([factory landscapeAnchoredAdaptiveBannerAdSizeWithWidth:@(34)]).andReturn(testAdSize);
+
+  FLTAnchoredAdaptiveBannerSize *size =
+      [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory
+                                                 orientation:@"landscape"
+                                                       width:@(34)];
+  NSData *encodedMessage = [_messageCodec encode:size];
+
+  FLTAnchoredAdaptiveBannerSize *decodedSize = [_messageCodec decode:encodedMessage];
+  XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+}
+
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_currentOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(45, 56));
+
+  FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
+  OCMStub([factory currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:@(45)])
+      .andReturn(testAdSize);
+
+  FLTAnchoredAdaptiveBannerSize *size =
+      [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory orientation:NULL width:@(45)];
   NSData *encodedMessage = [_messageCodec encode:size];
 
   FLTAnchoredAdaptiveBannerSize *decodedSize = [_messageCodec decode:encodedMessage];
@@ -181,13 +212,19 @@
   request.keywords = @[ @"apple" ];
   request.contentURL = @"banana";
   request.nonPersonalizedAds = YES;
-
+  NSArray<NSString *> *contentURLs = @[ @"url-1.com", @"url-2.com" ];
+  request.neighboringContentURLs = contentURLs;
+  request.location = [[FLTLocationParams alloc] initWithAccuracy:@1.5 longitude:@52 latitude:@123];
   NSData *encodedMessage = [_messageCodec encode:request];
 
   FLTAdRequest *decodedRequest = [_messageCodec decode:encodedMessage];
   XCTAssertTrue([decodedRequest.keywords isEqualToArray:@[ @"apple" ]]);
   XCTAssertEqualObjects(decodedRequest.contentURL, @"banana");
   XCTAssertTrue(decodedRequest.nonPersonalizedAds);
+  XCTAssertEqualObjects(decodedRequest.neighboringContentURLs, contentURLs);
+  XCTAssertEqualObjects(decodedRequest.location.accuracy, @1.5);
+  XCTAssertEqualObjects(decodedRequest.location.longitude, @52);
+  XCTAssertEqualObjects(decodedRequest.location.latitude, @123);
 }
 
 - (void)testEncodeDecodeGAMAdRequest {
@@ -197,6 +234,10 @@
   request.customTargeting = @{@"table" : @"linen"};
   request.customTargetingLists = @{@"go" : @[ @"lakers" ]};
   request.nonPersonalizedAds = YES;
+  NSArray<NSString *> *contentURLs = @[ @"url-1.com", @"url-2.com" ];
+  request.neighboringContentURLs = contentURLs;
+  request.pubProvidedID = @"pub-id";
+  request.location = [[FLTLocationParams alloc] initWithAccuracy:@1.5 longitude:@52 latitude:@123];
   NSData *encodedMessage = [_messageCodec encode:request];
 
   FLTGAMAdRequest *decodedRequest = [_messageCodec decode:encodedMessage];
@@ -206,6 +247,11 @@
   XCTAssertTrue(
       [decodedRequest.customTargetingLists isEqualToDictionary:@{@"go" : @[ @"lakers" ]}]);
   XCTAssertTrue(decodedRequest.nonPersonalizedAds);
+  XCTAssertEqualObjects(decodedRequest.neighboringContentURLs, contentURLs);
+  XCTAssertEqualObjects(decodedRequest.pubProvidedID, @"pub-id");
+  XCTAssertEqualObjects(decodedRequest.location.accuracy, @1.5);
+  XCTAssertEqualObjects(decodedRequest.location.longitude, @52);
+  XCTAssertEqualObjects(decodedRequest.location.latitude, @123);
 }
 
 - (void)testEncodeDecodeRewardItem {
@@ -423,6 +469,10 @@
 }
 
 - (GADAdSize)landscapeAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *)width {
+  return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
+}
+
+- (GADAdSize)currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *)width {
   return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
 }
 @end
