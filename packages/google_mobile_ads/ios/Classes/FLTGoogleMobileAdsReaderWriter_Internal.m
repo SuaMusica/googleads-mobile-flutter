@@ -13,11 +13,13 @@
 // limitations under the License.
 
 #import "FLTGoogleMobileAdsReaderWriter_Internal.h"
+#import "FLTAdUtil.h"
 
 // The type values below must be consistent for each platform.
 typedef NS_ENUM(NSInteger, FLTAdMobField) {
   FLTAdMobFieldAdSize = 128,
   FLTAdMobFieldAdRequest = 129,
+  FLTAdMobFieldFluidAdSize = 130,
   FLTAdMobFieldRewardItem = 132,
   FLTAdMobFieldLoadError = 133,
   FLTAdMobFieldAdManagerAdRequest = 134,
@@ -32,6 +34,8 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
   FLTAdmobFieldSmartBannerAdSize = 143,
   FLTAdmobFieldNativeAdOptions = 144,
   FLTAdmobFieldVideoOptions = 145,
+  FLTAdmobFieldInlineAdaptiveAdSize = 146,
+  FLTAdmobFieldLocation = 147,
 };
 
 @interface FLTGoogleMobileAdsWriter : FlutterStandardWriter
@@ -75,6 +79,8 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
     case FLTAdMobFieldAdSize:
       return [[FLTAdSize alloc] initWithWidth:[self readValueOfType:[self readByte]]
                                        height:[self readValueOfType:[self readByte]]];
+    case FLTAdMobFieldFluidAdSize:
+      return [[FLTFluidSize alloc] init];
     case FLTAdMobFieldAdRequest: {
       FLTAdRequest *request = [[FLTAdRequest alloc] init];
 
@@ -83,7 +89,8 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
 
       NSNumber *nonPersonalizedAds = [self readValueOfType:[self readByte]];
       request.nonPersonalizedAds = nonPersonalizedAds.boolValue;
-
+      request.neighboringContentURLs = [self readValueOfType:[self readByte]];
+      request.location = [self readValueOfType:[self readByte]];
       return request;
     }
     case FLTAdMobFieldRewardItem: {
@@ -145,6 +152,9 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
       request.customTargetingLists = [self readValueOfType:[self readByte]];
       NSNumber *nonPersonalizedAds = [self readValueOfType:[self readByte]];
       request.nonPersonalizedAds = nonPersonalizedAds.boolValue;
+      request.neighboringContentURLs = [self readValueOfType:[self readByte]];
+      request.pubProvidedID = [self readValueOfType:[self readByte]];
+      request.location = [self readValueOfType:[self readByte]];
       return request;
     }
     case FLTAdMobFieldAdapterInitializationState: {
@@ -202,6 +212,18 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
                  customControlsRequested:[self readValueOfType:[self readByte]]
                               startMuted:[self readValueOfType:[self readByte]]];
     }
+    case FLTAdmobFieldLocation: {
+      return [[FLTLocationParams alloc] initWithAccuracy:[self readValueOfType:[self readByte]]
+                                               longitude:[self readValueOfType:[self readByte]]
+                                                latitude:[self readValueOfType:[self readByte]]];
+    }
+    case FLTAdmobFieldInlineAdaptiveAdSize: {
+      return [[FLTInlineAdaptiveBannerSize alloc]
+          initWithFactory:_adSizeFactory
+                    width:[self readValueOfType:[self readByte]]
+                maxHeight:[self readValueOfType:[self readByte]]
+              orientation:[self readValueOfType:[self readByte]]];
+    }
   }
   return [super readValueOfType:type];
 }
@@ -210,7 +232,13 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
 
 @implementation FLTGoogleMobileAdsWriter
 - (void)writeAdSize:(FLTAdSize *_Nonnull)value {
-  if ([value isKindOfClass:[FLTAnchoredAdaptiveBannerSize class]]) {
+  if ([value isKindOfClass:[FLTInlineAdaptiveBannerSize class]]) {
+    [self writeByte:FLTAdmobFieldInlineAdaptiveAdSize];
+    FLTInlineAdaptiveBannerSize *size = (FLTInlineAdaptiveBannerSize *)value;
+    [self writeValue:size.width];
+    [self writeValue:size.maxHeight];
+    [self writeValue:size.orientation];
+  } else if ([value isKindOfClass:[FLTAnchoredAdaptiveBannerSize class]]) {
     [self writeByte:FLTAdmobFieldAnchoredAdaptiveBannerAdSize];
     FLTAnchoredAdaptiveBannerSize *size = (FLTAnchoredAdaptiveBannerSize *)value;
     [self writeValue:size.orientation];
@@ -219,6 +247,8 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
     [self writeByte:FLTAdmobFieldSmartBannerAdSize];
     FLTSmartBannerSize *size = (FLTSmartBannerSize *)value;
     [self writeValue:size.orientation];
+  } else if ([value isKindOfClass:[FLTFluidSize class]]) {
+    [self writeByte:FLTAdMobFieldFluidAdSize];
   } else if ([value isKindOfClass:[FLTAdSize class]]) {
     [self writeByte:FLTAdMobFieldAdSize];
     [self writeValue:value.width];
@@ -237,12 +267,17 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
     [self writeValue:request.customTargeting];
     [self writeValue:request.customTargetingLists];
     [self writeValue:@(request.nonPersonalizedAds)];
+    [self writeValue:request.neighboringContentURLs];
+    [self writeValue:request.pubProvidedID];
+    [self writeValue:request.location];
   } else if ([value isKindOfClass:[FLTAdRequest class]]) {
     [self writeByte:FLTAdMobFieldAdRequest];
     FLTAdRequest *request = value;
     [self writeValue:request.keywords];
     [self writeValue:request.contentURL];
     [self writeValue:@(request.nonPersonalizedAds)];
+    [self writeValue:request.neighboringContentURLs];
+    [self writeValue:request.location];
   } else if ([value isKindOfClass:[FLTRewardItem class]]) {
     [self writeByte:FLTAdMobFieldRewardItem];
     FLTRewardItem *item = value;
@@ -315,6 +350,12 @@ typedef NS_ENUM(NSInteger, FLTAdMobField) {
     [self writeValue:options.clickToExpandRequested];
     [self writeValue:options.customControlsRequested];
     [self writeValue:options.startMuted];
+  } else if ([value isKindOfClass:[FLTLocationParams class]]) {
+    [self writeByte:FLTAdmobFieldLocation];
+    FLTLocationParams *location = value;
+    [self writeValue:location.accuracy];
+    [self writeValue:location.longitude];
+    [self writeValue:location.latitude];
   } else {
     [super writeValue:value];
   }

@@ -18,7 +18,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-
+import 'inline_adaptive_example.dart';
+import 'fluid_example.dart';
 import 'reusable_inline_example.dart';
 
 void main() {
@@ -155,10 +156,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _createAnchoredBanner(BuildContext context) async {
     final AnchoredAdaptiveBannerAdSize? size =
-        await AdSize.getAnchoredAdaptiveBannerAdSize(
-      Orientation.portrait,
-      MediaQuery.of(context).size.width.truncate(),
-    );
+        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+            MediaQuery.of(context).size.width.truncate());
 
     if (size == null) {
       print('Unable to get height of anchored banner.');
@@ -218,18 +217,39 @@ class _MyAppState extends State<MyApp> {
                     case 'RewardedAd':
                       _showRewardedAd();
                       break;
+                    case 'Fluid':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => FluidExample()),
+                      );
+                      break;
+                    case 'Inline adaptive':
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => InlineAdaptiveExample()),
+                      );
+                      break;
                     default:
                       throw AssertionError('unexpected button: $result');
                   }
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                   PopupMenuItem<String>(
-                    value: '$InterstitialAd',
-                    child: Text('$InterstitialAd'),
+                    value: 'InterstitialAd',
+                    child: Text('InterstitialAd'),
                   ),
                   PopupMenuItem<String>(
-                    value: '$RewardedAd',
-                    child: Text('$RewardedAd'),
+                    value: 'RewardedAd',
+                    child: Text('RewardedAd'),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'Fluid',
+                    child: Text('Fluid'),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'Inline adaptive',
+                    child: Text('Inline adaptive'),
                   ),
                 ],
               ),

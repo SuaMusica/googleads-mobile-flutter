@@ -14,6 +14,7 @@
 
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -142,6 +143,40 @@ class LoadAdError extends AdError {
   }
 }
 
+/// Location parameters that can be configured in an ad request.
+class LocationParams {
+  /// Location parameters that can be configured in an ad request.
+  const LocationParams({
+    required this.accuracy,
+    required this.longitude,
+    required this.latitude,
+    this.time,
+  });
+
+  /// The accuracy in meters.
+  final double accuracy;
+
+  /// The longitude in degrees.
+  final double longitude;
+
+  /// The latitude in degrees.
+  final double latitude;
+
+  /// The UTC time, in milliseconds since epoch (January 1, 1970).
+  ///
+  /// This is required on Android, and ignored on iOS.
+  final int? time;
+
+  @override
+  bool operator ==(Object other) {
+    return other is LocationParams &&
+        accuracy == other.accuracy &&
+        longitude == other.longitude &&
+        latitude == other.latitude &&
+        time == other.time;
+  }
+}
+
 /// Targeting info per the AdMob API.
 ///
 /// This class's properties mirror the native AdRequest API. See for example:
@@ -151,7 +186,10 @@ class AdRequest {
   const AdRequest({
     this.keywords,
     this.contentUrl,
+    this.neighboringContentUrls,
     this.nonPersonalizedAds,
+    this.httpTimeoutMillis,
+    this.location,
   });
 
   /// Words or phrases describing the current user activity.
@@ -161,6 +199,9 @@ class AdRequest {
   ///
   /// This webpage content is used for targeting and brand safety purposes.
   final String? contentUrl;
+
+  /// URLs representing web content near an ad.
+  final List<String>? neighboringContentUrls;
 
   /// Non-personalized ads are ads that are not based on a user’s past behavior.
   ///
@@ -168,55 +209,71 @@ class AdRequest {
   /// https://support.google.com/admob/answer/7676680?hl=en
   final bool? nonPersonalizedAds;
 
+  /// A custom timeout for HTTPS calls during an ad request.
+  ///
+  /// This is only supported in Android. This value is ignored on iOS.
+  final int? httpTimeoutMillis;
+
+  /// Location data.
+  ///
+  /// Used for mediation targeting purposes.
+  final LocationParams? location;
+
   @override
   bool operator ==(Object other) {
     return other is AdRequest &&
         listEquals<String>(keywords, other.keywords) &&
         contentUrl == other.contentUrl &&
-        nonPersonalizedAds == other.nonPersonalizedAds;
+        nonPersonalizedAds == other.nonPersonalizedAds &&
+        listEquals(neighboringContentUrls, other.neighboringContentUrls) &&
+        httpTimeoutMillis == other.httpTimeoutMillis &&
+        location == other.location;
   }
 }
 
 /// Targeting info per the Ad Manager API.
-class AdManagerAdRequest {
+class AdManagerAdRequest extends AdRequest {
   /// Constructs an [AdManagerAdRequest] from optional targeting information.
   const AdManagerAdRequest({
-    this.keywords,
-    this.contentUrl,
+    List<String>? keywords,
+    String? contentUrl,
+    List<String>? neighboringContentUrls,
     this.customTargeting,
     this.customTargetingLists,
-    this.nonPersonalizedAds,
-  });
-
-  /// Words or phrases describing the current user activity.
-  final List<String>? keywords;
-
-  /// URL string for a webpage whose content matches the app’s primary content.
-  ///
-  /// This webpage content is used for targeting and brand safety purposes.
-  final String? contentUrl;
+    bool? nonPersonalizedAds,
+    int? httpTimeoutMillis,
+    this.publisherProvidedId,
+    LocationParams? location,
+  }) : super(
+          keywords: keywords,
+          contentUrl: contentUrl,
+          neighboringContentUrls: neighboringContentUrls,
+          nonPersonalizedAds: nonPersonalizedAds,
+          httpTimeoutMillis: httpTimeoutMillis,
+          location: location,
+        );
 
   /// Key-value pairs used for custom targeting.
   final Map<String, String>? customTargeting;
 
   /// Key-value pairs used for custom targeting.
+  ///
+  /// Any duplicate keys from [customTargeting] will be overwritten.
   final Map<String, List<String>>? customTargetingLists;
 
-  /// Non-personalized ads are ads that are not based on a user’s past behavior.
-  ///
-  /// For more information:
-  /// https://support.google.com/admanager/answer/9005435?hl=en
-  final bool? nonPersonalizedAds;
+  /// The identifier used for frequency capping, audience segmentation
+  /// and targeting, sequential ad rotation, and other audience-based ad
+  /// delivery controls across devices.
+  final String? publisherProvidedId;
 
   @override
   bool operator ==(Object other) {
-    return other is AdManagerAdRequest &&
-        listEquals<String>(keywords, other.keywords) &&
-        contentUrl == other.contentUrl &&
+    return super == other &&
+        other is AdManagerAdRequest &&
         mapEquals<String, String>(customTargeting, other.customTargeting) &&
         customTargetingLists.toString() ==
             other.customTargetingLists.toString() &&
-        nonPersonalizedAds == other.nonPersonalizedAds;
+        publisherProvidedId == other.publisherProvidedId;
   }
 }
 
@@ -238,7 +295,7 @@ class AnchoredAdaptiveBannerAdSize extends AdSize {
   }) : super(width: width, height: height);
 
   /// Orientation of the device used by the SDK to automatically find the correct height.
-  final Orientation orientation;
+  final Orientation? orientation;
 }
 
 /// Ad units that render screen-width banner ads on any screen size across different devices in either [Orientation].
@@ -249,6 +306,48 @@ class SmartBannerAdSize extends AdSize {
 
   /// Orientation of the device used by the SDK to automatically find the correct height.
   final Orientation orientation;
+}
+
+/// A dynamically sized banner that matches its parent's width and content height.
+class FluidAdSize extends AdSize {
+  /// Default constructor for [FluidAdSize].
+  const FluidAdSize() : super(width: -3, height: -3);
+}
+
+/// A size for inline adaptive banner ads.
+///
+/// This ad size takes a width and optionally a maximum height and orientation.
+/// They will be rendered at the provided width and have variable height decided
+/// by Google servers.
+///
+/// You can obtain an instance of this using factory methods such as
+/// [AdSize.getCurrentOrientationInlineAdaptiveBannerAdSize(width)].
+///
+/// After an inline adaptive banner ad is loaded, you should use
+/// [BannerAd.getPlatformAdSize] or [AdManagerBannerAd.getPlatformAdSize] to get
+/// the height to use for the ad container.
+class InlineAdaptiveSize extends AdSize {
+  /// Private constructor for [InlineAdaptiveSize].
+  ///
+  /// You should use one of the static constructors in [AdSize].
+  const InlineAdaptiveSize._({
+    required int width,
+    this.maxHeight,
+    this.orientation,
+  }) : super(width: width, height: 0);
+
+  /// The maximum height allowed.
+  final int? maxHeight;
+
+  /// The orientation. If none if specified the current orientation is used.
+  final Orientation? orientation;
+
+  /// Representation of [orientation] to pass to platform code.
+  int? get orientationValue => orientation == null
+      ? null
+      : orientation == Orientation.portrait
+          ? 0
+          : 1;
 }
 
 /// [AdSize] represents the size of a banner ad.
@@ -285,6 +384,9 @@ class AdSize {
   /// The leaderboard (728x90) size.
   static const AdSize leaderboard = AdSize(width: 728, height: 90);
 
+  /// A dynamically sized banner that matches its parent's width and expands/contracts its height to match the ad's content after loading completes.
+  static const AdSize fluid = FluidAdSize();
+
   /// Ad units that render screen-width banner ads on any screen size across different devices in either [Orientation].
   ///
   /// Width of the current device can be found using:
@@ -298,7 +400,7 @@ class AdSize {
   ) async {
     final num? height = await instanceManager.channel.invokeMethod<num?>(
       'AdSize#getAnchoredAdaptiveBannerAdSize',
-      <String, Object>{
+      <String, Object?>{
         'orientation': describeEnum(orientation),
         'width': width,
       },
@@ -310,6 +412,88 @@ class AdSize {
       width: width,
       height: height.truncate(),
     );
+  }
+
+  /// Returns an AdSize with the given width and a Google-optimized height to create a banner ad.
+  ///
+  /// The size returned will have an aspect ratio similar to AdSize, suitable for anchoring near the top or bottom of your app.
+  /// The height will never be larger than 15% of the device's current orientation height and never smaller than 50px.
+  /// This function always returns the same height for any width / device combination.
+  /// For more details, visit: https://developers.google.com/android/reference/com/google/android/gms/ads/AdSize#getCurrentOrientationAnchoredAdaptiveBannerAdSize(android.content.Context,%20int)
+  static Future<AnchoredAdaptiveBannerAdSize?>
+      getCurrentOrientationAnchoredAdaptiveBannerAdSize(int width) async {
+    final num? height = await instanceManager.channel.invokeMethod<num?>(
+      'AdSize#getAnchoredAdaptiveBannerAdSize',
+      <String, Object?>{
+        'width': width,
+      },
+    );
+
+    if (height == null) return null;
+    return AnchoredAdaptiveBannerAdSize(
+      null,
+      width: width,
+      height: height.truncate(),
+    );
+  }
+
+  /// Gets an AdSize with the given width and height that is always 0.
+  ///
+  /// This ad size allows Google servers to choose an optimal ad size with a
+  /// height less than or equal to the height of the screen in the current
+  /// orientation.
+  /// After the ad is loaded, you should update the height of the ad container
+  /// by calling [BannerAd.getPlatformAdSize] or
+  /// [AdManagerBannerAd.getPlatformAdSize] from the ad load callback.
+  /// This ad size is most suitable for ads intended to be displayed inside
+  /// scrollable content.
+  static InlineAdaptiveSize getCurrentOrientationInlineAdaptiveBannerAdSize(
+      int width) {
+    return InlineAdaptiveSize._(width: width);
+  }
+
+  /// Gets an AdSize in landscape orientation with the given width and 0 height.
+  ///
+  /// This ad size allows Google servers to choose an optimal ad size with a
+  /// height less than or equal to the height of the screen in landscape
+  /// orientation.
+  /// After the ad is loaded, you should update the height of the ad container
+  /// by calling [BannerAd.getPlatformAdSize] or
+  /// [AdManagerBannerAd.getPlatformAdSize] from the ad load callback.
+  /// This ad size is most suitable for ads intended to be displayed inside
+  /// scrollable content.
+  static InlineAdaptiveSize getLandscapeInlineAdaptiveBannerAdSize(int width) {
+    return InlineAdaptiveSize._(
+        width: width, orientation: Orientation.landscape);
+  }
+
+  /// Gets an AdSize in portrait orientation with the given width and 0 height.
+  ///
+  /// This ad size allows Google servers to choose an optimal ad size with a
+  /// height less than or equal to the height of the screen in portrait
+  /// orientation.
+  /// After the ad is loaded, you should update the height of the ad container
+  /// by calling [BannerAd.getPlatformAdSize] or
+  /// [AdManagerBannerAd.getPlatformAdSize] from the ad load callback.
+  /// This ad size is most suitable for ads intended to be displayed inside
+  /// scrollable content.
+  static InlineAdaptiveSize getPortraitInlineAdaptiveBannerAdSize(int width) {
+    return InlineAdaptiveSize._(
+        width: width, orientation: Orientation.portrait);
+  }
+
+  /// Gets an AdSize with the given width and height that is always 0.
+  ///
+  /// This ad size allows Google servers to choose an optimal ad size with a
+  /// height less than or equal to [maxHeight].
+  /// After the ad is loaded, you should update the height of the ad container
+  /// by calling [BannerAd.getPlatformAdSize] or
+  /// [AdManagerBannerAd.getPlatformAdSize] from the ad load callback.
+  /// This ad size is most suitable for ads intended to be displayed inside
+  /// scrollable content.
+  static InlineAdaptiveSize getInlineAdaptiveBannerAdSize(
+      int width, int maxHeight) {
+    return InlineAdaptiveSize._(width: width, maxHeight: maxHeight);
   }
 
   /// Ad units that render screen-width banner ads on any screen size across different devices in either orientation on Android.
@@ -525,6 +709,122 @@ class _AdWidgetState extends State<AdWidget> {
   }
 }
 
+/// A widget for displaying [FluidAdManagerBannerAd].
+///
+/// This widget adjusts its height based on the platform rendered ad.
+class FluidAdWidget extends StatefulWidget {
+  /// Constructs a [FluidAdWidget].
+  const FluidAdWidget({Key? key, required this.ad, this.width})
+      : super(key: key);
+
+  /// Ad to be displayed as a widget.
+  final FluidAdManagerBannerAd ad;
+
+  /// The width to set for the ad widget.
+  final double? width;
+
+  @override
+  _FluidAdWidgetState createState() => _FluidAdWidgetState();
+}
+
+class _FluidAdWidgetState extends State<FluidAdWidget> {
+  bool _adIdAlreadyMounted = false;
+  bool _adLoadNotCalled = false;
+  double _height = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final int? adId = instanceManager.adIdFor(widget.ad);
+    if (adId != null) {
+      if (instanceManager.isWidgetAdIdMounted(adId)) {
+        _adIdAlreadyMounted = true;
+      }
+      instanceManager.mountWidgetAdId(adId);
+    } else {
+      _adLoadNotCalled = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    final int? adId = instanceManager.adIdFor(widget.ad);
+    if (adId != null) {
+      instanceManager.unmountWidgetAdId(adId);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_adIdAlreadyMounted) {
+      throw FlutterError.fromParts(<DiagnosticsNode>[
+        ErrorSummary('This AdWidget is already in the Widget tree'),
+        ErrorHint(
+            'If you placed this AdWidget in a list, make sure you create a new instance '
+            'in the builder function with a unique ad object.'),
+        ErrorHint(
+            'Make sure you are not using the same ad object in more than one AdWidget.'),
+      ]);
+    }
+    if (_adLoadNotCalled) {
+      throw FlutterError.fromParts(<DiagnosticsNode>[
+        ErrorSummary(
+            'AdWidget requires Ad.load to be called before AdWidget is inserted into the tree'),
+        ErrorHint(
+            'Parameter ad is not loaded. Call Ad.load before AdWidget is inserted into the tree.'),
+      ]);
+    }
+
+    widget.ad.onFluidAdHeightChangedListener = (ad, height) {
+      setState(() {
+        _height = height;
+      });
+    };
+
+    Widget platformView;
+    double height;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      platformView = PlatformViewLink(
+        viewType: '${instanceManager.channel.name}/ad_widget',
+        surfaceFactory:
+            (BuildContext context, PlatformViewController controller) {
+          return AndroidViewSurface(
+            controller: controller as AndroidViewController,
+            gestureRecognizers: const <Factory<OneSequenceGestureRecognizer>>{},
+            hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+          );
+        },
+        onCreatePlatformView: (PlatformViewCreationParams params) {
+          return PlatformViewsService.initSurfaceAndroidView(
+            id: params.id,
+            viewType: '${instanceManager.channel.name}/ad_widget',
+            layoutDirection: TextDirection.ltr,
+            creationParams: instanceManager.adIdFor(widget.ad),
+            creationParamsCodec: StandardMessageCodec(),
+          )
+            ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
+            ..create();
+        },
+      );
+      height = _height / MediaQuery.of(context).devicePixelRatio;
+    } else {
+      platformView = UiKitView(
+        viewType: '${instanceManager.channel.name}/ad_widget',
+        creationParams: instanceManager.adIdFor(widget.ad),
+        creationParamsCodec: StandardMessageCodec(),
+      );
+      height = _height;
+    }
+
+    return Container(
+      height: max(0, height),
+      width: widget.width,
+      child: platformView,
+    );
+  }
+}
+
 /// A banner ad.
 ///
 /// This ad can either be overlaid on top of all flutter widgets as a static
@@ -570,6 +870,46 @@ class BannerAd extends AdWithView {
   Future<void> load() async {
     await instanceManager.loadBannerAd(this);
   }
+
+  /// Returns the AdSize of the associated platform ad object.
+  ///
+  /// The dimensions of the [AdSize] returned here may differ from [size],
+  /// depending on what type of [AdSize] was used.
+  /// The future will resolve to null if [load] has not been called yet.
+  Future<AdSize?> getPlatformAdSize() async {
+    return await instanceManager.getAdSize(this);
+  }
+}
+
+/// An 'AdManagerBannerAd' that has fluid ad size.
+///
+/// These ads will dynamically adjust their height to match the width of the ad.
+/// This should be used with [FluidAdWidget], which displays the ad in a widget
+/// that adjusts its height to the height of the platform rendered ad.
+class FluidAdManagerBannerAd extends AdManagerBannerAd {
+  /// Creates a [FluidAdManagerBannerAd].
+  ///
+  /// These ads dynamically change their height based on the width.
+  /// Set [onFluidAdHeightChangedListener] to get notified of height updates.
+  FluidAdManagerBannerAd({
+    required String adUnitId,
+    required AdManagerBannerAdListener listener,
+    required AdManagerAdRequest request,
+    this.onFluidAdHeightChangedListener,
+  }) : super(
+          sizes: [FluidAdSize()],
+          adUnitId: adUnitId,
+          listener: listener,
+          request: request,
+        );
+
+  /// Listener for when the height of the ad changes.
+  OnFluidAdHeightChangedListener? onFluidAdHeightChangedListener;
+
+  @override
+  Future<void> load() async {
+    return instanceManager.loadFluidAd(this);
+  }
 }
 
 /// A banner ad displayed with Google Ad Manager.
@@ -606,6 +946,15 @@ class AdManagerBannerAd extends AdWithView {
   @override
   Future<void> load() async {
     await instanceManager.loadAdManagerBannerAd(this);
+  }
+
+  /// Returns the AdSize of the associated platform ad object.
+  ///
+  /// The dimensions of the [AdSize] returned here may differ from [size],
+  /// depending on what type of [AdSize] was used.
+  /// The future will resolve to null if [load] has not been called yet.
+  Future<AdSize?> getPlatformAdSize() async {
+    return await instanceManager.getAdSize(this);
   }
 }
 

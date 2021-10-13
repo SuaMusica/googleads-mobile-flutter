@@ -215,6 +215,14 @@
                                                              adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);
+  } else if ([call.method isEqualToString:@"loadFluidAd"]) {
+    FLTFluidGAMBannerAd *ad =
+        [[FLTFluidGAMBannerAd alloc] initWithAdUnitId:call.arguments[@"adUnitId"]
+                                              request:call.arguments[@"request"]
+                                   rootViewController:rootController
+                                                 adId:call.arguments[@"adId"]];
+    [_manager loadAd:ad];
+    result(nil);
   } else if ([call.method isEqualToString:@"loadNativeAd"]) {
     NSString *factoryId = call.arguments[@"factoryId"];
     id<FLTNativeAdFactory> factory = _nativeAdFactories[factoryId];
@@ -313,6 +321,10 @@
     } else {
       result(nil);
     }
+  } else if ([call.method isEqualToString:@"getAdSize"]) {
+    FLTBannerAd *ad = (FLTBannerAd *)[_manager adFor:call.arguments[@"adId"]];
+    result([ad getAdSize]);
+    ;
   } else {
     result(FlutterMethodNotImplemented);
   }

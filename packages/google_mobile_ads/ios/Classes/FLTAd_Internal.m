@@ -41,25 +41,71 @@
 - (GADAdSize)landscapeAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *_Nonnull)width {
   return GADLandscapeAnchoredAdaptiveBannerAdSizeWithWidth(width.doubleValue);
 }
+
+- (GADAdSize)currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *_Nonnull)width {
+  return GADCurrentOrientationAnchoredAdaptiveBannerAdSizeWithWidth(width.doubleValue);
+}
+
+- (GADAdSize)currentOrientationInlineAdaptiveBannerSizeWithWidth:(NSNumber *_Nonnull)width {
+  return GADCurrentOrientationInlineAdaptiveBannerAdSizeWithWidth(width.floatValue);
+}
+
+- (GADAdSize)portraitOrientationInlineAdaptiveBannerSizeWithWidth:(NSNumber *_Nonnull)width {
+  return GADPortraitInlineAdaptiveBannerAdSizeWithWidth(width.floatValue);
+}
+- (GADAdSize)landscapeInlineAdaptiveBannerAdSizeWithWidth:(NSNumber *_Nonnull)width {
+  return GADLandscapeInlineAdaptiveBannerAdSizeWithWidth(width.floatValue);
+}
+- (GADAdSize)inlineAdaptiveBannerAdSizeWithWidthAndMaxHeight:(NSNumber *_Nonnull)width
+                                                   maxHeight:(NSNumber *_Nonnull)maxHeight {
+  return GADInlineAdaptiveBannerAdSizeWithWidthAndMaxHeight(width.floatValue, maxHeight.floatValue);
+}
+
 @end
 
 @implementation FLTAnchoredAdaptiveBannerSize
 - (instancetype _Nonnull)initWithFactory:(FLTAdSizeFactory *_Nonnull)factory
-                             orientation:(NSString *_Nonnull)orientation
+                             orientation:(NSString *)orientation
                                    width:(NSNumber *_Nonnull)width {
   GADAdSize size;
-  if ([orientation isEqualToString:@"portrait"]) {
+  if ([FLTAdUtil isNull:orientation]) {
+    size = [factory currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:width];
+  } else if ([orientation isEqualToString:@"portrait"]) {
     size = [factory portraitAnchoredAdaptiveBannerAdSizeWithWidth:width];
   } else if ([orientation isEqualToString:@"landscape"]) {
     size = [factory landscapeAnchoredAdaptiveBannerAdSizeWithWidth:width];
   } else {
-    NSLog(@"AdaptiveBanner orientation should be 'portrait' or 'landscape': %@", orientation);
+    NSLog(@"Unexpected value for orientation: %@", orientation);
     return nil;
   }
 
   self = [self initWithAdSize:size];
   if (self) {
     _orientation = orientation;
+  }
+  return self;
+}
+@end
+
+@implementation FLTInlineAdaptiveBannerSize
+- (instancetype _Nonnull)initWithFactory:(FLTAdSizeFactory *_Nonnull)factory
+                                   width:(NSNumber *_Nonnull)width
+                               maxHeight:(NSNumber *_Nullable)maxHeight
+                             orientation:(NSNumber *_Nullable)orientation {
+  GADAdSize gadAdSize;
+  if ([FLTAdUtil isNotNull:orientation]) {
+    gadAdSize = orientation.intValue == 0
+                    ? [factory portraitOrientationInlineAdaptiveBannerSizeWithWidth:width]
+                    : [factory landscapeInlineAdaptiveBannerAdSizeWithWidth:width];
+  } else if ([FLTAdUtil isNotNull:maxHeight]) {
+    gadAdSize = [factory inlineAdaptiveBannerAdSizeWithWidthAndMaxHeight:width maxHeight:maxHeight];
+  } else {
+    gadAdSize = [factory currentOrientationInlineAdaptiveBannerSizeWithWidth:width];
+  }
+  self = [self initWithAdSize:gadAdSize];
+  if (self) {
+    _orientation = orientation;
+    _maxHeight = maxHeight;
   }
   return self;
 }
@@ -88,6 +134,28 @@
 }
 @end
 
+@implementation FLTLocationParams
+
+- (instancetype _Nonnull)initWithAccuracy:(NSNumber *_Nonnull)accuracy
+                                longitude:(NSNumber *_Nonnull)longitude
+                                 latitude:(NSNumber *_Nonnull)latitude {
+  self = [super init];
+  if (self) {
+    _accuracy = accuracy;
+    _longitude = longitude;
+    _latitude = latitude;
+  }
+  return self;
+}
+@end
+
+@implementation FLTFluidSize
+- (instancetype _Nonnull)init {
+  self = [self initWithAdSize:kGADAdSizeFluid];
+  return self;
+}
+@end
+
 @implementation FLTAdRequest
 - (GADRequest *_Nonnull)asGADRequest {
   GADRequest *request = [GADRequest request];
@@ -98,8 +166,13 @@
     extras.additionalParameters = @{@"npa" : @"1"};
     [request registerAdNetworkExtras:extras];
   }
-
+  request.neighboringContentURLStrings = _neighboringContentURLs;
   request.requestAgent = FLT_REQUEST_AGENT_VERSIONED;
+  if ([FLTAdUtil isNotNull:_location]) {
+    [request setLocationWithLatitude:_location.latitude.floatValue
+                           longitude:_location.longitude.floatValue
+                            accuracy:_location.accuracy.floatValue];
+  }
   return request;
 }
 @end
@@ -155,11 +228,15 @@
 }
 @end
 
+#pragma mark - FLTGAMAdRequest
+
 @implementation FLTGAMAdRequest
 - (GADRequest *_Nonnull)asGAMRequest {
   GAMRequest *request = [GAMRequest request];
   request.keywords = self.keywords;
   request.contentURL = self.contentURL;
+  request.neighboringContentURLStrings = self.neighboringContentURLs;
+  request.publisherProvidedID = self.pubProvidedID;
 
   NSMutableDictionary<NSString *, id> *targetingDictionary =
       [NSMutableDictionary dictionaryWithDictionary:self.customTargeting];
@@ -171,11 +248,17 @@
     extras.additionalParameters = @{@"npa" : @"1"};
     [request registerAdNetworkExtras:extras];
   }
-
+  if ([FLTAdUtil isNotNull:self.location]) {
+    [request setLocationWithLatitude:self.location.latitude.floatValue
+                           longitude:self.location.longitude.floatValue
+                            accuracy:self.location.accuracy.floatValue];
+  }
   request.requestAgent = FLT_REQUEST_AGENT_VERSIONED;
   return request;
 }
 @end
+
+#pragma mark - FLTBaseAd
 
 @interface FLTBaseAd ()
 @property(readwrite) NSNumber *_Nonnull adId;
@@ -184,6 +267,8 @@
 @implementation FLTBaseAd
 @synthesize adId;
 @end
+
+#pragma mark - FLTBannerAd
 
 @implementation FLTBannerAd {
   GADBannerView *_bannerView;
@@ -225,6 +310,13 @@
   [self.bannerView loadRequest:_adRequest.asGADRequest];
 }
 
+- (FLTAdSize *)getAdSize {
+  if (self.bannerView) {
+    return [[FLTAdSize alloc] initWithAdSize:self.bannerView.adSize];
+  }
+  return nil;
+}
+
 #pragma mark - GADBannerViewDelegate
 
 - (void)bannerViewDidReceiveAd:(GADBannerView *)bannerView {
@@ -260,6 +352,7 @@
 
 @end
 
+#pragma mark - FLTGAMBannerAd
 @implementation FLTGAMBannerAd {
   GAMBannerView *_bannerView;
   FLTGAMAdRequest *_adRequest;
@@ -282,6 +375,7 @@
     if (sizes[0].size.size.width == 1){
         _bannerView.enableManualImpressions = YES;
     }
+
     NSMutableArray<NSValue *> *validAdSizes = [NSMutableArray arrayWithCapacity:sizes.count];
     for (FLTAdSize *size in sizes) {
       [validAdSizes addObject:NSValueFromGADAdSize(size.size)];
@@ -320,8 +414,98 @@
 - (void)adView:(nonnull GAMBannerView *)banner
     didReceiveAppEvent:(nonnull NSString *)name
               withInfo:(nullable NSString *)info {
-    [banner recordImpression];
-    [self.manager onAppEvent:self name:name data:info];
+  [banner recordImpression];
+  [self.manager onAppEvent:self name:name data:info];
+}
+
+@end
+
+#pragma mark - FLTFluidGAMBannerAd
+
+@implementation FLTFluidGAMBannerAd {
+  GAMBannerView *_bannerView;
+  FLTGAMAdRequest *_adRequest;
+  UIScrollView *_containerView;
+  CGFloat _height;
+}
+
+- (instancetype)initWithAdUnitId:(NSString *_Nonnull)adUnitId
+                         request:(FLTGAMAdRequest *_Nonnull)request
+              rootViewController:(UIViewController *_Nonnull)rootViewController
+                            adId:(NSNumber *_Nonnull)adId {
+  self = [super init];
+  if (self) {
+    self.adId = adId;
+    _height = -1;
+    _adRequest = request;
+    _bannerView = [[GAMBannerView alloc] initWithAdSize:kGADAdSizeFluid];
+    _bannerView.adUnitID = adUnitId;
+    _bannerView.rootViewController = rootViewController;
+    _bannerView.appEventDelegate = self;
+    _bannerView.delegate = self;
+    _bannerView.adSizeDelegate = self;
+
+    __weak FLTFluidGAMBannerAd *weakSelf = self;
+    self.bannerView.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+      if (weakSelf.manager == nil) {
+        return;
+      }
+      [weakSelf.manager onPaidEvent:weakSelf
+                              value:[[FLTAdValue alloc] initWithValue:value.value
+                                                            precision:(NSInteger)value.precision
+                                                         currencyCode:value.currencyCode]];
+    };
+  }
+  return self;
+}
+
+- (GADBannerView *_Nonnull)bannerView {
+  return _bannerView;
+}
+
+- (void)load {
+  [self.bannerView loadRequest:_adRequest.asGAMRequest];
+}
+
+#pragma mark - FlutterPlatformView
+
+- (nonnull UIView *)view {
+  if (_containerView) {
+    return _containerView;
+  }
+
+  UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:CGRectZero];
+  [scrollView setShowsHorizontalScrollIndicator:NO];
+  [scrollView setShowsVerticalScrollIndicator:NO];
+  [scrollView addSubview:_bannerView];
+
+  _bannerView.translatesAutoresizingMaskIntoConstraints = false;
+  NSLayoutConstraint *width = [NSLayoutConstraint constraintWithItem:_bannerView
+                                                           attribute:NSLayoutAttributeWidth
+                                                           relatedBy:0
+                                                              toItem:scrollView
+                                                           attribute:NSLayoutAttributeWidth
+                                                          multiplier:1.0
+                                                            constant:0];
+  [scrollView addConstraint:width];
+  _containerView = scrollView;
+  [_bannerView.widthAnchor constraintEqualToAnchor:scrollView.widthAnchor].active = YES;
+  [_bannerView.topAnchor constraintEqualToAnchor:scrollView.topAnchor].active = YES;
+  return scrollView;
+}
+
+#pragma mark - GADAdSizeDelegate
+
+- (void)adView:(GADBannerView *)bannerView willChangeAdSizeTo:(GADAdSize)adSize {
+  CGFloat height = adSize.size.height;
+  [self.manager onFluidAdHeightChanged:self height:height];
+}
+
+#pragma mark - GADAppEventDelegate
+- (void)adView:(nonnull GADBannerView *)banner
+    didReceiveAppEvent:(nonnull NSString *)name
+              withInfo:(nullable NSString *)info {
+  [self.manager onAppEvent:self name:name data:info];
 }
 
 @end
