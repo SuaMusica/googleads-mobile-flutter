@@ -352,6 +352,7 @@ void main() {
               ad: native,
               useHybridComposition: true,
             );
+
             Widget buildWidget = widget.createElement().build();
             expect(buildWidget, isA<PlatformViewLink>());
             return widget;
