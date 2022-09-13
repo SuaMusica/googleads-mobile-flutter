@@ -583,6 +583,7 @@ class AdWidget extends StatefulWidget {
     Key? key,
     required this.ad,
     this.useHybridComposition = false,
+    this.onlyVisible = false,
   }) : super(key: key);
 
   /// Ad to be displayed as a widget.
@@ -591,6 +592,8 @@ class AdWidget extends StatefulWidget {
   /// Use Hybrid composition or Virtual Display
   final bool useHybridComposition;
 
+  /// Whether should be displayed only when visible
+  final bool onlyVisible;
   @override
   _AdWidgetState createState() => _AdWidgetState();
 }
@@ -603,6 +606,7 @@ class _AdWidgetState extends State<AdWidget> {
   @override
   void initState() {
     super.initState();
+    _firstVisibleOccurred = !widget.onlyVisible;
     final int? adId = instanceManager.adIdFor(widget.ad);
     if (adId != null) {
       if (instanceManager.isWidgetAdIdMounted(adId)) {
@@ -652,34 +656,37 @@ class _AdWidgetState extends State<AdWidget> {
       // rendered.
       // TODO (jjliu15): Remove this after the flutter issue is resolved.
       if (_firstVisibleOccurred) {
-        return widget.useHybridComposition? PlatformViewLink(
-          viewType: '${instanceManager.channel.name}/ad_widget',
-          surfaceFactory:
-              (BuildContext context, PlatformViewController controller) {
-            return AndroidViewSurface(
-              controller: controller as AndroidViewController,
-              gestureRecognizers: const <
-                  Factory<OneSequenceGestureRecognizer>>{},
-              hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-            );
-          },
-          onCreatePlatformView: (PlatformViewCreationParams params) {
-            return PlatformViewsService.initSurfaceAndroidView(
-              id: params.id,
-              viewType: '${instanceManager.channel.name}/ad_widget',
-              layoutDirection: TextDirection.ltr,
-              creationParams: instanceManager.adIdFor(widget.ad),
-              creationParamsCodec: StandardMessageCodec(),
-            )
-              ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
-              ..create();
-          },
-        ): AndroidView(
-              viewType: viewType,
-              creationParams: instanceManager.adIdFor(widget.ad),
-              creationParamsCodec: const StandardMessageCodec(),
-              clipBehavior: Clip.none,
-            );
+        return widget.useHybridComposition
+            ? PlatformViewLink(
+                viewType: '${instanceManager.channel.name}/ad_widget',
+                surfaceFactory:
+                    (BuildContext context, PlatformViewController controller) {
+                  return AndroidViewSurface(
+                    controller: controller as AndroidViewController,
+                    gestureRecognizers: const <
+                        Factory<OneSequenceGestureRecognizer>>{},
+                    hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+                  );
+                },
+                onCreatePlatformView: (PlatformViewCreationParams params) {
+                  return PlatformViewsService.initSurfaceAndroidView(
+                    id: params.id,
+                    viewType: '${instanceManager.channel.name}/ad_widget',
+                    layoutDirection: TextDirection.ltr,
+                    creationParams: instanceManager.adIdFor(widget.ad),
+                    creationParamsCodec: StandardMessageCodec(),
+                  )
+                    ..addOnPlatformViewCreatedListener(
+                        params.onPlatformViewCreated)
+                    ..create();
+                },
+              )
+            : AndroidView(
+                viewType: viewType,
+                creationParams: instanceManager.adIdFor(widget.ad),
+                creationParamsCodec: const StandardMessageCodec(),
+                clipBehavior: Clip.none,
+              );
       } else {
         final adId = instanceManager.adIdFor(widget.ad);
         return VisibilityDetector(
