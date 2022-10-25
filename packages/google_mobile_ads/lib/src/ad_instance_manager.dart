@@ -1005,18 +1005,21 @@ class AdMessageCodec extends StandardMessageCodec {
           responseExtras: _deepCastStringKeyDynamicValueMap(
               readValueOfType(buffer.getUint8(), buffer)),
         );
+       //TODO: Remove when Google fixes it.
       case _valueAdapterResponseInfo:
         return AdapterResponseInfo(
-            adapterClassName: readValueOfType(buffer.getUint8(), buffer),
-            latencyMillis: readValueOfType(buffer.getUint8(), buffer),
-            description: readValueOfType(buffer.getUint8(), buffer),
-            adUnitMapping:
-                _deepCastStringMap(readValueOfType(buffer.getUint8(), buffer)),
+            adapterClassName: readValueOfType(buffer.getUint8(), buffer) ?? '',
+            latencyMillis: readValueOfType(buffer.getUint8(), buffer) ?? '',
+            description: readValueOfType(buffer.getUint8(), buffer) ?? '',
+            adUnitMapping: _deepCastStringMap(
+                readValueOfType(buffer.getUint8(), buffer) ?? ''),
             adError: readValueOfType(buffer.getUint8(), buffer),
-            adSourceName: readValueOfType(buffer.getUint8(), buffer),
-            adSourceId: readValueOfType(buffer.getUint8(), buffer),
-            adSourceInstanceName: readValueOfType(buffer.getUint8(), buffer),
-            adSourceInstanceId: readValueOfType(buffer.getUint8(), buffer));
+            adSourceName: readValueOfType(buffer.getUint8(), buffer) ?? '',
+            adSourceId: readValueOfType(buffer.getUint8(), buffer) ?? '',
+            adSourceInstanceName:
+                readValueOfType(buffer.getUint8(), buffer) ?? '',
+            adSourceInstanceId:
+                readValueOfType(buffer.getUint8(), buffer) ?? '');
       case _valueLoadAdError:
         return LoadAdError(
           readValueOfType(buffer.getUint8(), buffer),
