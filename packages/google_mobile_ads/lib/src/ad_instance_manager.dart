@@ -1085,6 +1085,7 @@ class AdMessageCodec extends StandardMessageCodec {
           responseExtras: _deepCastStringKeyDynamicValueMap(
               readValueOfType(buffer.getUint8(), buffer)),
         );
+      //TODO: Remove when Google fixes it.
       case _valueAdapterResponseInfo:
         return AdapterResponseInfo(
             adapterClassName: _safeReadString(buffer),
