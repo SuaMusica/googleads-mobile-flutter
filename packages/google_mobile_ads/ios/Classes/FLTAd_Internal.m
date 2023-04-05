@@ -14,7 +14,7 @@
 
 #import "FLTAd_Internal.h"
 #import "FLTAdUtil.h"
-#import "FLTConstants.h"
+#import "FLTNativeTemplateStyle.h"
 
 @implementation FLTAdSize
 - (instancetype _Nonnull)initWithWidth:(NSNumber *_Nonnull)width
@@ -220,7 +220,7 @@
   request.keywords = _keywords;
   request.contentURL = _contentURL;
   request.neighboringContentURLStrings = _neighboringContentURLs;
-  request.requestAgent = FLT_REQUEST_AGENT_VERSIONED;
+  request.requestAgent = _requestAgent;
   [self addNetworkExtrasToGADRequest:request adUnitId:adUnitId];
   return request;
 }
@@ -311,6 +311,8 @@
   request.contentURL = self.contentURL;
   request.neighboringContentURLStrings = self.neighboringContentURLs;
   request.publisherProvidedID = self.pubProvidedID;
+  request.requestAgent = self.requestAgent;
+
   NSMutableDictionary<NSString *, NSString *> *targetingDictionary =
       [NSMutableDictionary dictionaryWithDictionary:self.customTargeting];
   for (NSString *key in self.customTargetingLists) {
@@ -319,7 +321,6 @@
   }
   request.customTargeting = targetingDictionary;
   [self addNetworkExtrasToGADRequest:request adUnitId:adUnitId];
-  request.requestAgent = FLT_REQUEST_AGENT_VERSIONED;
   return request;
 }
 @end
@@ -1096,19 +1097,21 @@
   FLTAdRequest *_adRequest;
   NSObject<FLTNativeAdFactory> *_nativeAdFactory;
   NSDictionary<NSString *, id> *_customOptions;
-  GADNativeAdView *_view;
+  UIView *_view;
   GADAdLoader *_adLoader;
   FLTNativeAdOptions *_nativeAdOptions;
+  FLTNativeTemplateStyle *_nativeTemplateStyle;
 }
 
 - (instancetype _Nonnull)
-      initWithAdUnitId:(NSString *_Nonnull)adUnitId
-               request:(FLTAdRequest *_Nonnull)request
-       nativeAdFactory:(NSObject<FLTNativeAdFactory> *_Nonnull)nativeAdFactory
-         customOptions:(NSDictionary<NSString *, id> *_Nullable)customOptions
-    rootViewController:(UIViewController *_Nonnull)rootViewController
-                  adId:(NSNumber *_Nonnull)adId
-       nativeAdOptions:(FLTNativeAdOptions *_Nullable)nativeAdOptions {
+       initWithAdUnitId:(NSString *_Nonnull)adUnitId
+                request:(FLTAdRequest *_Nonnull)request
+        nativeAdFactory:(NSObject<FLTNativeAdFactory> *_Nonnull)nativeAdFactory
+          customOptions:(NSDictionary<NSString *, id> *_Nullable)customOptions
+     rootViewController:(UIViewController *_Nonnull)rootViewController
+                   adId:(NSNumber *_Nonnull)adId
+        nativeAdOptions:(FLTNativeAdOptions *_Nullable)nativeAdOptions
+    nativeTemplateStyle:(FLTNativeTemplateStyle *_Nullable)nativeTemplateStyle {
   self = [super init];
   if (self) {
     self.adId = adId;
@@ -1127,6 +1130,7 @@
                                       adTypes:@[ GADAdLoaderAdTypeNative ]
                                       options:adLoaderOptions];
     _nativeAdOptions = nativeAdOptions;
+    _nativeTemplateStyle = nativeTemplateStyle;
     self.adLoader.delegate = self;
   }
   return self;
@@ -1155,8 +1159,13 @@
   // Use Nil instead of Null to fix crash with Swift integrations.
   NSDictionary<NSString *, id> *customOptions =
       [[NSNull null] isEqual:_customOptions] ? nil : _customOptions;
-  _view = [_nativeAdFactory createNativeAd:nativeAd
-                             customOptions:customOptions];
+  if ([FLTAdUtil isNotNull:_nativeTemplateStyle]) {
+    _view = [_nativeTemplateStyle getDisplayedView:nativeAd];
+  } else if ([FLTAdUtil isNotNull:_nativeAdFactory]) {
+    _view = [_nativeAdFactory createNativeAd:nativeAd
+                               customOptions:customOptions];
+  }
+
   nativeAd.delegate = self;
 
   __weak FLTNativeAd *weakSelf = self;
