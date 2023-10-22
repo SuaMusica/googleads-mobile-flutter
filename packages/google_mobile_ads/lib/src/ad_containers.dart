@@ -631,11 +631,21 @@ class AdWidget extends StatefulWidget {
   /// Default constructor for [AdWidget].
   ///
   /// [ad] must be loaded before this is added to the widget tree.
-  const AdWidget({Key? key, required this.ad}) : super(key: key);
+  const AdWidget({
+    Key? key,
+    required this.ad,
+    this.useHybridComposition = false,
+    this.onlyVisible = false,
+  }) : super(key: key);
 
   /// Ad to be displayed as a widget.
   final AdWithView ad;
 
+  /// Use Hybrid composition or Virtual Display
+  final bool useHybridComposition;
+
+  /// Whether should be displayed only when visible
+  final bool onlyVisible;
   @override
   _AdWidgetState createState() => _AdWidgetState();
 }
@@ -648,6 +658,7 @@ class _AdWidgetState extends State<AdWidget> {
   @override
   void initState() {
     super.initState();
+    _firstVisibleOccurred = !widget.onlyVisible;
     final int? adId = instanceManager.adIdFor(widget.ad);
     if (adId != null) {
       if (instanceManager.isWidgetAdIdMounted(adId)) {
@@ -688,6 +699,7 @@ class _AdWidgetState extends State<AdWidget> {
             'Parameter ad is not loaded. Call Ad.load before AdWidget is inserted into the tree.'),
       ]);
     }
+    final viewType = '${instanceManager.channel.name}/ad_widget';
     if (defaultTargetPlatform == TargetPlatform.android) {
       // Do not attach the platform view widget until it will actually become
       // visible. This is a workaround for
@@ -696,29 +708,37 @@ class _AdWidgetState extends State<AdWidget> {
       // rendered.
       if (_firstVisibleOccurred ||
           AdWidget.optOutOfVisibilityDetectorWorkaround) {
-        return PlatformViewLink(
-          viewType: '${instanceManager.channel.name}/ad_widget',
-          surfaceFactory:
-              (BuildContext context, PlatformViewController controller) {
-            return AndroidViewSurface(
-              controller: controller as AndroidViewController,
-              gestureRecognizers: const <Factory<
-                  OneSequenceGestureRecognizer>>{},
-              hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-            );
-          },
-          onCreatePlatformView: (PlatformViewCreationParams params) {
-            return PlatformViewsService.initSurfaceAndroidView(
-              id: params.id,
-              viewType: '${instanceManager.channel.name}/ad_widget',
-              layoutDirection: TextDirection.ltr,
-              creationParams: instanceManager.adIdFor(widget.ad),
-              creationParamsCodec: StandardMessageCodec(),
-            )
-              ..addOnPlatformViewCreatedListener(params.onPlatformViewCreated)
-              ..create();
-          },
-        );
+        return widget.useHybridComposition
+            ? PlatformViewLink(
+                viewType: '${instanceManager.channel.name}/ad_widget',
+                surfaceFactory:
+                    (BuildContext context, PlatformViewController controller) {
+                  return AndroidViewSurface(
+                    controller: controller as AndroidViewController,
+                    gestureRecognizers: const <
+                        Factory<OneSequenceGestureRecognizer>>{},
+                    hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+                  );
+                },
+                onCreatePlatformView: (PlatformViewCreationParams params) {
+                  return PlatformViewsService.initSurfaceAndroidView(
+                    id: params.id,
+                    viewType: '${instanceManager.channel.name}/ad_widget',
+                    layoutDirection: TextDirection.ltr,
+                    creationParams: instanceManager.adIdFor(widget.ad),
+                    creationParamsCodec: StandardMessageCodec(),
+                  )
+                    ..addOnPlatformViewCreatedListener(
+                        params.onPlatformViewCreated)
+                    ..create();
+                },
+              )
+            : AndroidView(
+                viewType: viewType,
+                creationParams: instanceManager.adIdFor(widget.ad),
+                creationParamsCodec: const StandardMessageCodec(),
+                clipBehavior: Clip.none,
+              );
       } else {
         final adId = instanceManager.adIdFor(widget.ad);
         return VisibilityDetector(
@@ -737,7 +757,7 @@ class _AdWidgetState extends State<AdWidget> {
     }
 
     return UiKitView(
-      viewType: '${instanceManager.channel.name}/ad_widget',
+      viewType: viewType,
       creationParams: instanceManager.adIdFor(widget.ad),
       creationParamsCodec: StandardMessageCodec(),
     );
