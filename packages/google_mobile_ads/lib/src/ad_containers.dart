@@ -635,7 +635,6 @@ class AdWidget extends StatefulWidget {
     Key? key,
     required this.ad,
     this.useHybridComposition = false,
-    this.onlyVisible = false,
   }) : super(key: key);
 
   /// Ad to be displayed as a widget.
@@ -644,8 +643,6 @@ class AdWidget extends StatefulWidget {
   /// Use Hybrid composition or Virtual Display
   final bool useHybridComposition;
 
-  /// Whether should be displayed only when visible
-  final bool onlyVisible;
   @override
   _AdWidgetState createState() => _AdWidgetState();
 }
@@ -657,7 +654,6 @@ class _AdWidgetState extends State<AdWidget> {
   @override
   void initState() {
     super.initState();
-    _firstVisibleOccurred = !widget.onlyVisible;
     final int? adId = instanceManager.adIdFor(widget.ad);
     if (adId != null) {
       if (instanceManager.isWidgetAdIdMounted(adId)) {
