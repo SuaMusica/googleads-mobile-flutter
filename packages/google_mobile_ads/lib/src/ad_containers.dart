@@ -20,10 +20,10 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 
 import 'ad_instance_manager.dart';
 import 'ad_listeners.dart';
+import 'mediation_extras.dart';
 import 'nativetemplates/native_template_style.dart';
 
 /// Error information about why an ad operation failed.
@@ -154,6 +154,7 @@ class AdapterResponseInfo {
   ///
   /// This is an empty string "" if the ad server did not populate this field.
   final String adSourceInstanceId;
+
   @override
   String toString() {
     return '$runtimeType(adapterClassName: $adapterClassName, '
@@ -191,15 +192,15 @@ class LoadAdError extends AdError {
 /// [AdRequest.Builder for Android](https://developers.google.com/android/reference/com/google/android/gms/ads/AdRequest.Builder).
 class AdRequest {
   /// Default constructor for [AdRequest].
-  const AdRequest({
-    this.keywords,
-    this.contentUrl,
-    this.neighboringContentUrls,
-    this.nonPersonalizedAds,
-    this.httpTimeoutMillis,
-    this.mediationExtrasIdentifier,
-    this.extras,
-  });
+  const AdRequest(
+      {this.keywords,
+      this.contentUrl,
+      this.neighboringContentUrls,
+      this.nonPersonalizedAds,
+      this.httpTimeoutMillis,
+      @deprecated this.mediationExtrasIdentifier,
+      this.extras,
+      this.mediationExtras});
 
   /// Words or phrases describing the current user activity.
   final List<String>? keywords;
@@ -229,10 +230,14 @@ class AdRequest {
   /// to the ad request. This identifier will get passed to your platform-side
   /// mediation extras factory class, allowing for additional customization
   /// of network extras.
+  @deprecated
   final String? mediationExtrasIdentifier;
 
   /// Extras to pass to the AdMob adapter.
   final Map<String, String>? extras;
+
+  /// Extra parameters to pass to specific ad adapters.
+  final List<MediationExtras>? mediationExtras;
 
   @override
   bool operator ==(Object other) {
@@ -242,8 +247,10 @@ class AdRequest {
         nonPersonalizedAds == other.nonPersonalizedAds &&
         listEquals(neighboringContentUrls, other.neighboringContentUrls) &&
         httpTimeoutMillis == other.httpTimeoutMillis &&
+        //ignore: deprecated_member_use_from_same_package
         mediationExtrasIdentifier == other.mediationExtrasIdentifier &&
-        mapEquals<String, String>(extras, other.extras);
+        mapEquals<String, String>(extras, other.extras) &&
+        mediationExtras == other.mediationExtras;
   }
 }
 
@@ -261,14 +268,17 @@ class AdManagerAdRequest extends AdRequest {
     this.publisherProvidedId,
     String? mediationExtrasIdentifier,
     Map<String, String>? extras,
+    List<MediationExtras>? mediationExtras,
   }) : super(
           keywords: keywords,
           contentUrl: contentUrl,
           neighboringContentUrls: neighboringContentUrls,
           nonPersonalizedAds: nonPersonalizedAds,
           httpTimeoutMillis: httpTimeoutMillis,
+          //ignore: deprecated_member_use_from_same_package
           mediationExtrasIdentifier: mediationExtrasIdentifier,
           extras: extras,
+          mediationExtras: mediationExtras,
         );
 
   /// Key-value pairs used for custom targeting.
@@ -419,7 +429,7 @@ class AdSize {
     final num? height = await instanceManager.channel.invokeMethod<num?>(
       'AdSize#getAnchoredAdaptiveBannerAdSize',
       <String, Object?>{
-        'orientation': describeEnum(orientation),
+        'orientation': orientation.name,
         'width': width,
       },
     );
@@ -618,16 +628,6 @@ abstract class AdWithoutView extends Ad {
 /// Must call `load()` first before showing the widget. Otherwise, a
 /// [PlatformException] will be thrown.
 class AdWidget extends StatefulWidget {
-  /// Opt out of the visibility detector workaround.
-  ///
-  /// As a workaround for
-  /// https://github.com/googleads/googleads-mobile-flutter/issues/580,
-  /// we wait for the widget to get displayed once before attaching
-  /// the platform view.
-  ///
-  /// Set this flag to true if you are building with Flutter 3.7.0 or higher.
-  static bool optOutOfVisibilityDetectorWorkaround = false;
-
   /// Default constructor for [AdWidget].
   ///
   /// [ad] must be loaded before this is added to the widget tree.
@@ -653,7 +653,6 @@ class AdWidget extends StatefulWidget {
 class _AdWidgetState extends State<AdWidget> {
   bool _adIdAlreadyMounted = false;
   bool _adLoadNotCalled = false;
-  bool _firstVisibleOccurred = false;
 
   @override
   void initState() {
@@ -701,59 +700,37 @@ class _AdWidgetState extends State<AdWidget> {
     }
     final viewType = '${instanceManager.channel.name}/ad_widget';
     if (defaultTargetPlatform == TargetPlatform.android) {
-      // Do not attach the platform view widget until it will actually become
-      // visible. This is a workaround for
-      // https://github.com/googleads/googleads-mobile-flutter/issues/580,
-      // where impressions are erroneously fired due to how platform views are
-      // rendered.
-      if (_firstVisibleOccurred ||
-          AdWidget.optOutOfVisibilityDetectorWorkaround) {
-        return widget.useHybridComposition
-            ? PlatformViewLink(
-                viewType: '${instanceManager.channel.name}/ad_widget',
-                surfaceFactory:
-                    (BuildContext context, PlatformViewController controller) {
-                  return AndroidViewSurface(
-                    controller: controller as AndroidViewController,
-                    gestureRecognizers: const <
-                        Factory<OneSequenceGestureRecognizer>>{},
-                    hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-                  );
-                },
-                onCreatePlatformView: (PlatformViewCreationParams params) {
-                  return PlatformViewsService.initSurfaceAndroidView(
-                    id: params.id,
-                    viewType: '${instanceManager.channel.name}/ad_widget',
-                    layoutDirection: TextDirection.ltr,
-                    creationParams: instanceManager.adIdFor(widget.ad),
-                    creationParamsCodec: StandardMessageCodec(),
-                  )
-                    ..addOnPlatformViewCreatedListener(
-                        params.onPlatformViewCreated)
-                    ..create();
-                },
-              )
-            : AndroidView(
-                viewType: viewType,
-                creationParams: instanceManager.adIdFor(widget.ad),
-                creationParamsCodec: const StandardMessageCodec(),
-                clipBehavior: Clip.none,
-              );
-      } else {
-        final adId = instanceManager.adIdFor(widget.ad);
-        return VisibilityDetector(
-          key: Key('android-platform-view-$adId'),
-          onVisibilityChanged: (visibilityInfo) {
-            if (!_firstVisibleOccurred &&
-                visibilityInfo.visibleFraction > 0.01) {
-              setState(() {
-                _firstVisibleOccurred = true;
-              });
-            }
-          },
-          child: Container(),
-        );
-      }
+      return widget.useHybridComposition
+          ? PlatformViewLink(
+              viewType: viewType,
+              surfaceFactory:
+                  (BuildContext context, PlatformViewController controller) {
+                return AndroidViewSurface(
+                  controller: controller as AndroidViewController,
+                  gestureRecognizers: const <Factory<
+                      OneSequenceGestureRecognizer>>{},
+                  hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+                );
+              },
+              onCreatePlatformView: (PlatformViewCreationParams params) {
+                return PlatformViewsService.initSurfaceAndroidView(
+                  id: params.id,
+                  viewType: viewType,
+                  layoutDirection: TextDirection.ltr,
+                  creationParams: instanceManager.adIdFor(widget.ad),
+                  creationParamsCodec: StandardMessageCodec(),
+                )
+                  ..addOnPlatformViewCreatedListener(
+                      params.onPlatformViewCreated)
+                  ..create();
+              },
+            )
+          : AndroidView(
+              viewType: viewType,
+              creationParams: instanceManager.adIdFor(widget.ad),
+              creationParamsCodec: const StandardMessageCodec(),
+              clipBehavior: Clip.none,
+            );
     }
 
     return UiKitView(
@@ -1401,26 +1378,10 @@ class ServerSideVerificationOptions {
 
 /// A full-screen app open ad for the Google Mobile Ads Plugin.
 class AppOpenAd extends AdWithoutView {
-  /// Portrait orientation.
-  static const int orientationPortrait = 1;
-
-  /// Landscape orientation left.
-  ///
-  /// Android does not distinguish between left/right, and will treat this
-  /// the same way as [orientationLandscapeRight].
-  static const int orientationLandscapeLeft = 2;
-
-  /// Landscape orientation right.
-  ///
-  /// Android does not distinguish between left/right, and will treat this
-  /// the same way as [orientationLandscapeLeft].
-  static const int orientationLandscapeRight = 3;
-
   AppOpenAd._({
     required String adUnitId,
     required this.adLoadCallback,
     required this.request,
-    required this.orientation,
   })  : adManagerAdRequest = null,
         super(adUnitId: adUnitId);
 
@@ -1428,7 +1389,6 @@ class AppOpenAd extends AdWithoutView {
     required String adUnitId,
     required this.adLoadCallback,
     required this.adManagerAdRequest,
-    required this.orientation,
   })  : request = null,
         super(adUnitId: adUnitId);
 
@@ -1441,12 +1401,6 @@ class AppOpenAd extends AdWithoutView {
   /// Listener for ad load events.
   final AppOpenAdLoadCallback adLoadCallback;
 
-  /// The requested orientation.
-  ///
-  /// Must be [orientationPortrait], [orientationLandscapeLeft], or
-  /// [orientationLandscapeRight].
-  final int orientation;
-
   /// Callbacks to be invoked when ads show and dismiss full screen content.
   FullScreenContentCallback<AppOpenAd>? fullScreenContentCallback;
 
@@ -1455,13 +1409,11 @@ class AppOpenAd extends AdWithoutView {
     required String adUnitId,
     required AdRequest request,
     required AppOpenAdLoadCallback adLoadCallback,
-    required int orientation,
   }) async {
     AppOpenAd ad = AppOpenAd._(
       adUnitId: adUnitId,
       adLoadCallback: adLoadCallback,
       request: request,
-      orientation: orientation,
     );
     await instanceManager.loadAppOpenAd(ad);
   }
@@ -1471,13 +1423,11 @@ class AppOpenAd extends AdWithoutView {
     required String adUnitId,
     required AdManagerAdRequest adManagerAdRequest,
     required AppOpenAdLoadCallback adLoadCallback,
-    required int orientation,
   }) async {
     AppOpenAd ad = AppOpenAd._fromAdManagerRequest(
       adUnitId: adUnitId,
       adLoadCallback: adLoadCallback,
       adManagerAdRequest: adManagerAdRequest,
-      orientation: orientation,
     );
     await instanceManager.loadAppOpenAd(ad);
   }
