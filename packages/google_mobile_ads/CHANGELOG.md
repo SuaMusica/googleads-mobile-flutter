@@ -1,3 +1,21 @@
+## 5.0.0
+* Adds `MediationExtras` class to include parameters when using mediation through the implementation of `FlutterMediationExtras` in Android and `FlutterMediationExtras` in iOS.
+* Deprecates `MediationNetworkExtrasProvider` and `FLTMediationNetworkExtrasProvider`.
+* Removed the `orientation` parameter for the AppOpen Ad format.
+* Bumps minimum Android SDK version to 21.
+* Updates GMA iOS dependency to 11.2.0
+* Updates GMA Android dependency to 23.0.0
+
+## 4.0.0
+* The minimum supported Flutter version is now 3.7.0.
+* Removes `visibility_detector` as a dependency, and the workaround added in
+  https://github.com/googleads/googleads-mobile-flutter/pull/610.
+* Adds null checks for Ad Ids for Android in
+  https://github.com/googleads/googleads-mobile-flutter/pull/967
+* Updated Android dependencies in https://github.com/googleads/googleads-mobile-flutter/pull/843
+* Updates GMA iOS dependency to 10.11.0
+* Updates GMA Android dependency to 22.5.0
+
 ## 3.1.0
 * Updates GMA iOS dependency to 10.9.0
 * Adds explicit UMP SDK 2.1.0 dependency for Android.
