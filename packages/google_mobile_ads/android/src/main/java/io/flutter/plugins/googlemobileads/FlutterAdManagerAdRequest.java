@@ -71,10 +71,12 @@ class FlutterAdManagerAdRequest extends FlutterAdRequest {
           getMediationExtrasIdentifier(),
           getMediationNetworkExtrasProvider(),
           getAdMobExtras(),
-          getRequestAgent());
+          getRequestAgent(),
+          getMediationExtras());
     }
   }
 
+  @SuppressWarnings("deprecation")
   private FlutterAdManagerAdRequest(
       @Nullable List<String> keywords,
       @Nullable String contentUrl,
@@ -87,7 +89,8 @@ class FlutterAdManagerAdRequest extends FlutterAdRequest {
       @Nullable String mediationExtrasIdentifier,
       @Nullable MediationNetworkExtrasProvider mediationNetworkExtrasProvider,
       @Nullable Map<String, String> adMobExtras,
-      @NonNull String requestAgent) {
+      @NonNull String requestAgent,
+      @Nullable List<FlutterMediationExtras> mediationExtras) {
     super(
         keywords,
         contentUrl,
@@ -97,7 +100,8 @@ class FlutterAdManagerAdRequest extends FlutterAdRequest {
         mediationExtrasIdentifier,
         mediationNetworkExtrasProvider,
         adMobExtras,
-        requestAgent);
+        requestAgent,
+        mediationExtras);
     this.customTargeting = customTargeting;
     this.customTargetingLists = customTargetingLists;
     this.publisherProvidedId = publisherProvidedId;
