@@ -68,7 +68,11 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
   @Nullable private AppStateNotifier appStateNotifier;
   @Nullable private UserMessagingPlatformManager userMessagingPlatformManager;
   private final Map<String, NativeAdFactory> nativeAdFactories = new HashMap<>();
-  @Nullable private MediationNetworkExtrasProvider mediationNetworkExtrasProvider;
+
+  @SuppressWarnings("deprecation")
+  @Nullable
+  private MediationNetworkExtrasProvider mediationNetworkExtrasProvider;
+
   private final FlutterMobileAdsWrapper flutterMobileAds;
   /**
    * Public constructor for the plugin. Dependency initialization is handled in lifecycle methods
@@ -144,7 +148,9 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
    *     used to provide network extras when ad requests are created
    * @return whether {@code mediationNetworkExtrasProvider} was registered to a {@code
    *     GoogleMobileAdsPlugin} associated with {@code engine}
+   * @deprecated Use {@link FlutterMediationExtras} instead.
    */
+  @Deprecated
   public static boolean registerMediationNetworkExtrasProvider(
       FlutterEngine engine, MediationNetworkExtrasProvider mediationNetworkExtrasProvider) {
     final GoogleMobileAdsPlugin gmaPlugin =
@@ -164,7 +170,9 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
    * with the plugin using {@code unregisterMediationNetworkExtrasProvider}.
    *
    * @param engine The {@link FlutterEngine} which should have an attached instance of this plugin
+   * @deprecated Use {@link FlutterMediationExtras} instead.
    */
+  @Deprecated
   public static void unregisterMediationNetworkExtrasProvider(FlutterEngine engine) {
     final GoogleMobileAdsPlugin gmaPlugin =
         (GoogleMobileAdsPlugin) engine.getPlugins().get(GoogleMobileAdsPlugin.class);
@@ -547,7 +555,6 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
         final FlutterAppOpenAd appOpenAd =
             new FlutterAppOpenAd(
                 call.<Integer>argument("adId"),
-                call.<Integer>argument("orientation"),
                 requireNonNull(instanceManager),
                 requireNonNull(call.<String>argument("adUnitId")),
                 call.<FlutterAdRequest>argument("request"),
