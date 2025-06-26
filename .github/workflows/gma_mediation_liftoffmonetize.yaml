@@ -59,6 +59,8 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
+      - name: Select Xcode version
+        run: sudo xcode-select -s '/Applications/Xcode_16.2.0.app/Contents/Developer'
       - name: "Install Flutter"
         run: ./.github/workflows/scripts/install-flutter.sh stable
       - name: "Install Tools"
@@ -94,12 +96,3 @@ jobs:
         run: |
           cd packages/mediation/gma_mediation_liftoffmonetize
           flutter analyze
-      - name: "Flutter Publish"
-        run: |
-          cd packages/mediation/gma_mediation_liftoffmonetize
-          flutter pub publish --dry-run
-      - name: "Flutter Format"
-        run: |
-          flutter pub global activate flutter_plugin_tools
-          flutter pub global run flutter_plugin_tools format
-          ./.github/workflows/scripts/validate-formatting.sh

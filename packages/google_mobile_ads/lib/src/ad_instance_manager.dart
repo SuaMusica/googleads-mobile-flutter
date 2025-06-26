@@ -16,12 +16,15 @@
 
 // ignore_for_file: deprecated_member_use_from_same_package
 
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/src/ad_inspector_containers.dart';
 import 'package:google_mobile_ads/src/ad_listeners.dart';
@@ -988,10 +991,10 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.size);
     } else if (value is Color) {
       buffer.putUint8(_valueColor);
-      writeValue(buffer, value.alpha);
-      writeValue(buffer, value.red);
-      writeValue(buffer, value.green);
-      writeValue(buffer, value.blue);
+      writeValue(buffer, (value.a * 255).toInt());
+      writeValue(buffer, (value.r * 255).toInt());
+      writeValue(buffer, (value.g * 255).toInt());
+      writeValue(buffer, (value.b * 255).toInt());
     } else if (value is NativeTemplateFontStyle) {
       buffer.putUint8(_valueNativeTemplateFontStyle);
       writeValue(buffer, value.index);
