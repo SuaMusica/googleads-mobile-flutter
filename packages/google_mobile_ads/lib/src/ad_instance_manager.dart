@@ -16,15 +16,19 @@
 
 // ignore_for_file: deprecated_member_use_from_same_package
 
+// ignore_for_file: deprecated_member_use
+
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/src/ad_inspector_containers.dart';
 import 'package:google_mobile_ads/src/ad_listeners.dart';
+import 'package:google_mobile_ads/src/mediation_extras.dart';
 import 'package:google_mobile_ads/src/mobile_ads.dart';
 import 'package:google_mobile_ads/src/nativetemplates/template_type.dart';
 import 'package:google_mobile_ads/src/webview_controller_util.dart';
@@ -586,7 +590,6 @@ class AdInstanceManager {
         'adUnitId': ad.adUnitId,
         'request': ad.request,
         'adManagerRequest': ad.adManagerAdRequest,
-        'orientation': ad.orientation,
       },
     );
   }
@@ -858,6 +861,7 @@ class AdMessageCodec extends StandardMessageCodec {
   static const int _valueNativeTemplateFontStyle = 151;
   static const int _valueNativeTemplateType = 152;
   static const int _valueColor = 153;
+  static const int _valueMediationExtras = 154;
 
   @override
   void writeValue(WriteBuffer buffer, dynamic value) {
@@ -877,6 +881,7 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.publisherProvidedId);
       writeValue(buffer, value.mediationExtrasIdentifier);
       writeValue(buffer, value.extras);
+      writeValue(buffer, value.mediationExtras);
     } else if (value is AdRequest) {
       buffer.putUint8(_valueAdRequest);
       writeValue(buffer, value.keywords);
@@ -888,6 +893,15 @@ class AdMessageCodec extends StandardMessageCodec {
       }
       writeValue(buffer, value.mediationExtrasIdentifier);
       writeValue(buffer, value.extras);
+      writeValue(buffer, value.mediationExtras);
+    } else if (value is MediationExtras) {
+      buffer.putUint8(_valueMediationExtras);
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        writeValue(buffer, value.getAndroidClassName());
+      } else {
+        writeValue(buffer, value.getIOSClassName());
+      }
+      writeValue(buffer, value.getExtras());
     } else if (value is RewardItem) {
       buffer.putUint8(_valueRewardItem);
       writeValue(buffer, value.amount);
@@ -923,7 +937,7 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.message);
     } else if (value is AdapterInitializationState) {
       buffer.putUint8(_valueInitializationState);
-      writeValue(buffer, describeEnum(value));
+      writeValue(buffer, value.name);
     } else if (value is AdapterStatus) {
       buffer.putUint8(_valueAdapterStatus);
       writeValue(buffer, value.state);
@@ -977,10 +991,10 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.size);
     } else if (value is Color) {
       buffer.putUint8(_valueColor);
-      writeValue(buffer, value.alpha);
-      writeValue(buffer, value.red);
-      writeValue(buffer, value.green);
-      writeValue(buffer, value.blue);
+      writeValue(buffer, (value.a * 255).toInt());
+      writeValue(buffer, (value.r * 255).toInt());
+      writeValue(buffer, (value.g * 255).toInt());
+      writeValue(buffer, (value.b * 255).toInt());
     } else if (value is NativeTemplateFontStyle) {
       buffer.putUint8(_valueNativeTemplateFontStyle);
       writeValue(buffer, value.index);
@@ -1015,8 +1029,7 @@ class AdMessageCodec extends StandardMessageCodec {
         Orientation? orientation;
         if (orientationStr != null) {
           orientation = Orientation.values.firstWhere(
-            (Orientation orientation) =>
-                describeEnum(orientation) == orientationStr,
+            (Orientation orientation) => orientation.name == orientationStr,
           );
         }
         return AnchoredAdaptiveBannerAdSize(
@@ -1029,8 +1042,7 @@ class AdMessageCodec extends StandardMessageCodec {
             readValueOfType(buffer.getUint8(), buffer);
         return SmartBannerAdSize(
           Orientation.values.firstWhere(
-            (Orientation orientation) =>
-                describeEnum(orientation) == orientationStr,
+            (Orientation orientation) => orientation.name == orientationStr,
           ),
         );
       case _valueAdSize:
@@ -1055,7 +1067,12 @@ class AdMessageCodec extends StandardMessageCodec {
           mediationExtrasIdentifier: readValueOfType(buffer.getUint8(), buffer),
           extras: readValueOfType(buffer.getUint8(), buffer)
               ?.cast<String, String>(),
+          mediationExtras: readValueOfType(buffer.getUint8(), buffer)
+              ?.cast<List<MediationExtras>>(),
         );
+      case _valueMediationExtras:
+        return _MediationExtras(readValueOfType(buffer.getUint8(), buffer),
+            readValueOfType(buffer.getUint8(), buffer));
       case _valueRewardItem:
         return RewardItem(
           readValueOfType(buffer.getUint8(), buffer),
@@ -1114,6 +1131,8 @@ class AdMessageCodec extends StandardMessageCodec {
           mediationExtrasIdentifier: readValueOfType(buffer.getUint8(), buffer),
           extras: readValueOfType(buffer.getUint8(), buffer)
               ?.cast<String, String>(),
+          mediationExtras: readValueOfType(buffer.getUint8(), buffer)
+              ?.cast<List<MediationExtras>>(),
         );
       case _valueInitializationState:
         switch (readValueOfType(buffer.getUint8(), buffer)) {
@@ -1254,16 +1273,16 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.orientationValue);
     } else if (value is AnchoredAdaptiveBannerAdSize) {
       buffer.putUint8(_valueAnchoredAdaptiveBannerAdSize);
-      var orientationValue;
+      String? orientationValue;
       if (value.orientation != null) {
-        orientationValue = describeEnum(value.orientation as Orientation);
+        orientationValue = (value.orientation as Orientation).name;
       }
       writeValue(buffer, orientationValue);
       writeValue(buffer, value.width);
     } else if (value is SmartBannerAdSize) {
       buffer.putUint8(_valueSmartBannerAdSize);
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        writeValue(buffer, describeEnum(value.orientation));
+        writeValue(buffer, value.orientation.name);
       }
     } else if (value is FluidAdSize) {
       buffer.putUint8(_valueFluidAdSize);
@@ -1272,6 +1291,34 @@ class AdMessageCodec extends StandardMessageCodec {
       writeValue(buffer, value.width);
       writeValue(buffer, value.height);
     }
+  }
+}
+
+class _MediationExtras implements MediationExtras {
+  _MediationExtras(
+    String className,
+    Map<String, dynamic> extras,
+  )   : _androidClassName = className,
+        _iOSClassName = className,
+        _extras = extras;
+
+  final String _androidClassName;
+  final String _iOSClassName;
+  final Map<String, dynamic> _extras;
+
+  @override
+  String getAndroidClassName() {
+    return _androidClassName;
+  }
+
+  @override
+  Map<String, dynamic> getExtras() {
+    return _extras;
+  }
+
+  @override
+  String getIOSClassName() {
+    return _iOSClassName;
   }
 }
 

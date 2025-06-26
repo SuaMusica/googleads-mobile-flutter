@@ -13,6 +13,7 @@
 // limitations under the License.
 
 // ignore_for_file: public_member_api_docs
+import 'package:flutter/material.dart';
 import 'package:app_open_example/app_open_ad_manager.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -24,12 +25,13 @@ class AppLifecycleReactor {
 
   void listenToAppStateChanges() {
     AppStateEventNotifier.startListening();
-    AppStateEventNotifier.appStateStream
-        .forEach((state) => _onAppStateChanged(state));
+    AppStateEventNotifier.appStateStream.forEach(
+      (state) => _onAppStateChanged(state),
+    );
   }
 
   void _onAppStateChanged(AppState appState) {
-    print('New AppState state: $appState');
+    debugPrint('New AppState state: $appState');
     if (appState == AppState.foreground) {
       appOpenAdManager.showAdIfAvailable();
     }

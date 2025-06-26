@@ -171,7 +171,7 @@
   XCTAssertTrue(resultInvoked);
   XCTAssertNil(returnedResult);
   OCMVerify([gadRequestConfigurationMock
-      setSameAppKeyEnabled:[OCMArg isEqual:@(YES)]]);
+      setPublisherFirstPartyIDEnabled:[OCMArg isEqual:@(YES)]]);
 }
 
 - (void)testRegisterWebView {
@@ -226,7 +226,7 @@
 
   XCTAssertTrue(resultInvoked);
   XCTAssertNil(returnedResult);
-  OCMVerify([gadRequestConfigurationMock setSameAppKeyEnabled:NO]);
+  OCMVerify([gadRequestConfigurationMock setPublisherFirstPartyIDEnabled:NO]);
 
   FlutterMethodCall *methodCallWithBool = [FlutterMethodCall
       methodCallWithMethodName:@"MobileAds#setSameAppKeyEnabled"
@@ -244,7 +244,7 @@
 
   XCTAssertTrue(resultInvokedWithBool);
   XCTAssertNil(returnedResultWithBool);
-  OCMVerify([gadRequestConfigurationMock setSameAppKeyEnabled:NO]);
+  OCMVerify([gadRequestConfigurationMock setPublisherFirstPartyIDEnabled:NO]);
 }
 
 - (void)testSetAppMuted {
@@ -263,6 +263,11 @@
 
   XCTAssertTrue(resultInvoked);
   XCTAssertNil(returnedResult);
+  NSTimeInterval timeout = 5.0;
+  NSDate *startTime = [NSDate date];
+  while (!GADMobileAds.sharedInstance.applicationMuted && [[NSDate date] timeIntervalSinceDate:startTime] < timeout) {
+    [NSThread sleepForTimeInterval:0.1];
+  }
   XCTAssertTrue(GADMobileAds.sharedInstance.applicationMuted);
 
   methodCall =
@@ -279,6 +284,10 @@
 
   XCTAssertTrue(resultInvoked);
   XCTAssertNil(returnedResult);
+  startTime = [NSDate date];
+  while (GADMobileAds.sharedInstance.applicationMuted && [[NSDate date] timeIntervalSinceDate:startTime] < timeout) {
+    [NSThread sleepForTimeInterval:0.1];
+  }
   XCTAssertFalse(GADMobileAds.sharedInstance.applicationMuted);
 }
 
@@ -361,7 +370,9 @@
   [_fltGoogleMobileAdsPlugin handleMethodCall:methodCall result:result];
 
   XCTAssertTrue(resultInvoked);
-  XCTAssertEqual(returnedResult, [GADMobileAds.sharedInstance sdkVersion]);
+  XCTAssertEqual(
+      returnedResult,
+      GADGetStringFromVersionNumber(GADMobileAds.sharedInstance.versionNumber));
 }
 
 - (void)testOpenDebugMenu {

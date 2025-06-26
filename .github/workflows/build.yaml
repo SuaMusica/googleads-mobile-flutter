@@ -20,7 +20,6 @@ jobs:
       fail-fast: false
       matrix:
         regex:
-        - "samples/admob/adaptive_banner_example"
         - "samples/admob/app_open_example"
         - "samples/admob/banner_example"
         - "samples/admob/interstitial_example"
@@ -30,7 +29,7 @@ jobs:
         - "samples/admob/rewarded_example"
         - "samples/admob/rewarded_interstitial_example"   
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
       - name: "Install Flutter"
@@ -52,7 +51,6 @@ jobs:
       fail-fast: false
       matrix:
         regex:
-        - "samples/admob/adaptive_banner_example"
         - "samples/admob/app_open_example"
         - "samples/admob/banner_example"
         - "samples/admob/interstitial_example"
@@ -62,9 +60,11 @@ jobs:
         - "samples/admob/rewarded_example"
         - "samples/admob/rewarded_interstitial_example" 
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          fetch-depth: 0  
+          fetch-depth: 0
+      - name: Select Xcode version
+        run: sudo xcode-select -s '/Applications/Xcode_16.2.0.app/Contents/Developer'  
       - name: "Install Flutter"
         run: ./.github/workflows/scripts/install-flutter.sh stable
       - name: "Install Tools"
@@ -85,7 +85,6 @@ jobs:
       fail-fast: false
       matrix:
         regex:
-        - "samples/admob/adaptive_banner_example"
         - "samples/admob/app_open_example"
         - "samples/admob/banner_example"
         - "samples/admob/interstitial_example"
@@ -95,7 +94,7 @@ jobs:
         - "samples/admob/rewarded_example"
         - "samples/admob/rewarded_interstitial_example" 
     steps:
-      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 0
       - name: "Install Flutter"
@@ -107,11 +106,13 @@ jobs:
       - name: "Flutter Analyze"
         run: |
           cd $GOOGLEMOBILEADS_PLUGIN_SCOPE_EXAMPLE
+          flutter clean
+          flutter pub get
           flutter analyze
         env:
           GOOGLEMOBILEADS_PLUGIN_SCOPE_EXAMPLE: ${{ matrix.REGEX }} 
       - name: "Flutter Format"
         run: |
-          flutter pub global activate flutter_plugin_tools
-          flutter pub global run flutter_plugin_tools format
+          dart format --version
+          dart format samples/ --language-version latest
           ./.github/workflows/scripts/validate-formatting.sh

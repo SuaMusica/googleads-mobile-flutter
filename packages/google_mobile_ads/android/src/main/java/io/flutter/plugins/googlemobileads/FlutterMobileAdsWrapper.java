@@ -36,7 +36,14 @@ public class FlutterMobileAdsWrapper {
   /** Initializes the sdk. */
   public void initialize(
       @NonNull Context context, @NonNull OnInitializationCompleteListener listener) {
-    MobileAds.initialize(context, listener);
+    new Thread(
+            new Runnable() {
+              @Override
+              public void run() {
+                MobileAds.initialize(context, listener);
+              }
+            })
+        .start();
   }
 
   /** Wrapper for setAppMuted. */
@@ -77,9 +84,7 @@ public class FlutterMobileAdsWrapper {
   /** Register the webView for monetization. */
   public void registerWebView(int webViewId, FlutterEngine flutterEngine) {
     WebView webView = WebViewFlutterAndroidExternalApi.getWebView(flutterEngine, webViewId);
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-      Log.w(TAG, "MobileAds.registerWebView does not support API levels less than 21");
-    } else if (webView == null) {
+    if (webView == null) {
       Log.w(TAG, "MobileAds.registerWebView unable to find webView with id: " + webViewId);
     } else {
       MobileAds.registerWebView(webView);

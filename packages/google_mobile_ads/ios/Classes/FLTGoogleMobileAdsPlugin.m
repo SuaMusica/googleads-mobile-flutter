@@ -215,8 +215,8 @@
   UIViewController *root =
       UIApplication.sharedApplication.delegate.window.rootViewController;
   if ([FLTAdUtil isNull:root]) {
-    // UIApplication.sharedApplication.delegate.window is not guaranteed to be
-    // set. Use the keyWindow in this case.
+// UIApplication.sharedApplication.delegate.window is not guaranteed to be
+// set. Use the keyWindow in this case.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     root = UIApplication.sharedApplication.keyWindow.rootViewController;
@@ -226,8 +226,20 @@
   // Get the presented view controller. This fixes an issue in the add to app
   // case: https://github.com/googleads/googleads-mobile-flutter/issues/700
   UIViewController *presentedViewController = root;
-  while (presentedViewController.presentedViewController) {
-    presentedViewController = presentedViewController.presentedViewController;
+  while (presentedViewController.presentedViewController &&
+         ![presentedViewController.presentedViewController isBeingDismissed]) {
+    if ([presentedViewController isKindOfClass:[UITabBarController class]]) {
+      UITabBarController *tabBarController =
+          (UITabBarController *)presentedViewController;
+      presentedViewController = tabBarController.selectedViewController;
+    } else if ([presentedViewController
+                   isKindOfClass:[UINavigationController class]]) {
+      UINavigationController *navigationController =
+          (UINavigationController *)presentedViewController;
+      presentedViewController = navigationController.visibleViewController;
+    } else {
+      presentedViewController = presentedViewController.presentedViewController;
+    }
   }
   return presentedViewController;
 }
@@ -250,7 +262,7 @@
     GADRequestConfiguration *requestConfig =
         GADMobileAds.sharedInstance.requestConfiguration;
     NSNumber *isEnabled = call.arguments[@"isEnabled"];
-    [requestConfig setSameAppKeyEnabled:isEnabled.boolValue];
+    [requestConfig setPublisherFirstPartyIDEnabled:isEnabled.boolValue];
     result(nil);
   } else if ([call.method isEqualToString:@"MobileAds#setAppMuted"]) {
     GADMobileAds.sharedInstance.applicationMuted =
@@ -292,7 +304,8 @@
                              }
                            }];
   } else if ([call.method isEqualToString:@"MobileAds#getVersionString"]) {
-    result([GADMobileAds.sharedInstance sdkVersion]);
+    result(GADGetStringFromVersionNumber(
+        GADMobileAds.sharedInstance.versionNumber));
   } else if ([call.method
                  isEqualToString:@"MobileAds#getRequestConfiguration"]) {
     result(GADMobileAds.sharedInstance.requestConfiguration);
@@ -334,12 +347,12 @@
         tagForChildDirectedTreatment != (id)[NSNull null]) {
       switch ([tagForChildDirectedTreatment intValue]) {
       case 0:
-        [GADMobileAds.sharedInstance.requestConfiguration
-            tagForChildDirectedTreatment:NO];
+        GADMobileAds.sharedInstance.requestConfiguration
+            .tagForChildDirectedTreatment = @NO;
         break;
       case 1:
-        [GADMobileAds.sharedInstance.requestConfiguration
-            tagForChildDirectedTreatment:YES];
+        GADMobileAds.sharedInstance.requestConfiguration
+            .tagForChildDirectedTreatment = @YES;
         break;
       }
     }
@@ -347,12 +360,12 @@
         tagForUnderAgeOfConsent != (id)[NSNull null]) {
       switch ([tagForUnderAgeOfConsent intValue]) {
       case 0:
-        [GADMobileAds.sharedInstance.requestConfiguration
-            tagForUnderAgeOfConsent:NO];
+        GADMobileAds.sharedInstance.requestConfiguration
+            .tagForUnderAgeOfConsent = @NO;
         break;
       case 1:
-        [GADMobileAds.sharedInstance.requestConfiguration
-            tagForUnderAgeOfConsent:YES];
+        GADMobileAds.sharedInstance.requestConfiguration
+            .tagForUnderAgeOfConsent = @YES;
         break;
       }
     }
@@ -425,16 +438,14 @@
     FLTInterstitialAd *ad =
         [[FLTInterstitialAd alloc] initWithAdUnitId:call.arguments[@"adUnitId"]
                                             request:call.arguments[@"request"]
-                                 rootViewController:rootController
                                                adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);
   } else if ([call.method isEqualToString:@"loadAdManagerInterstitialAd"]) {
     FLTGAMInterstitialAd *ad = [[FLTGAMInterstitialAd alloc]
-          initWithAdUnitId:call.arguments[@"adUnitId"]
-                   request:call.arguments[@"request"]
-        rootViewController:rootController
-                      adId:call.arguments[@"adId"]];
+        initWithAdUnitId:call.arguments[@"adUnitId"]
+                 request:call.arguments[@"request"]
+                    adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);
   } else if ([call.method isEqualToString:@"loadRewardedAd"]) {
@@ -454,7 +465,6 @@
     FLTRewardedAd *ad =
         [[FLTRewardedAd alloc] initWithAdUnitId:call.arguments[@"adUnitId"]
                                         request:request
-                             rootViewController:rootController
                                            adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);
@@ -473,10 +483,9 @@
     }
 
     FLTRewardedInterstitialAd *ad = [[FLTRewardedInterstitialAd alloc]
-          initWithAdUnitId:call.arguments[@"adUnitId"]
-                   request:request
-        rootViewController:rootController
-                      adId:call.arguments[@"adId"]];
+        initWithAdUnitId:call.arguments[@"adUnitId"]
+                 request:request
+                    adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);
   } else if ([call.method isEqualToString:@"loadAppOpenAd"]) {
@@ -495,8 +504,6 @@
     FLTAppOpenAd *ad =
         [[FLTAppOpenAd alloc] initWithAdUnitId:call.arguments[@"adUnitId"]
                                        request:request
-                            rootViewController:rootController
-                                   orientation:call.arguments[@"orientation"]
                                           adId:call.arguments[@"adId"]];
     [_manager loadAd:ad];
     result(nil);

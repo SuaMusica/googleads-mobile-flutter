@@ -1,3 +1,54 @@
+## 6.0.0
+* Updates minimum Flutter SDK to 3.27.0
+* Updates Dart SDK low bound to 3.6.0.
+* Fixes AdMessageCodec deprecated API issue: https://github.com/googleads/googleads-mobile-flutter/issues/1242
+* Adds a new API (`isMounted`) to support recycling ad banners
+* Updates GMA [Android](https://developers.google.com/admob/android/rel-notes) dependency to 24.1.0
+* Updates GMA [iOS](https://developers.google.com/admob/ios/rel-notes) dependency to 12.2.0
+* Uses latest UMP SDK:
+  * [Android](https://developers.google.com/admob/android/privacy/release-notes) UMP SDK version 3.2.0.
+  * [iOS](https://developers.google.com/admob/ios/privacy/download#release_notes) UMP SDK version 3.0.0.
+
+## 5.3.1
+* Fixes dart SDK low bound building issues: https://github.com/googleads/googleads-mobile-flutter/issues/1234
+
+## 5.3.0
+* Updated WebView Flutter Android dependency 
+* Adds support for the new Debug Geography enums for the UMP SDK: 
+  * [Android](https://developers.google.com/admob/android/privacy/release-notes) UMP SDK version 3.1.0.
+  * [iOS](https://developers.google.com/admob/ios/privacy/download#release_notes) UMP SDK version 2.7.0.
+* Updates GMA [iOS](https://developers.google.com/admob/ios/rel-notes) dependency to 11.13.0
+* Updates GMA [Android](https://developers.google.com/admob/android/rel-notes) dependency to 23.6.0
+
+## 5.2.0
+* Removed use of rootViewController for iOS GMA SDK which solved issues like 
+  https://github.com/googleads/googleads-mobile-flutter/issues/1146 and https://github.com/googleads/googleads-mobile-flutter/issues/700.
+* Android GMA SDK is now initialized on a background thread.
+* Updates GMA [iOS](https://developers.google.com/admob/ios/rel-notes) dependency to 11.10.0
+* Updates GMA [Android](https://developers.google.com/admob/android/rel-notes) dependency to 23.4.0
+
+## 5.1.0
+* Adds support for APIs from the [Android](https://developers.google.com/admob/android/privacy/release-notes) UMP SDK version 2.2.0.
+* Adds support for APIs from the [iOS](https://developers.google.com/admob/ios/privacy/download#release_notes) UMP SDK version 2.4.0.
+
+## 5.0.0
+* Adds `MediationExtras` class to include parameters when using mediation through the implementation of `FlutterMediationExtras` in Android and `FlutterMediationExtras` in iOS.
+* Deprecates `MediationNetworkExtrasProvider` and `FLTMediationNetworkExtrasProvider`.
+* Removed the `orientation` parameter for the AppOpen Ad format.
+* Bumps minimum Android SDK version to 21.
+* Updates GMA iOS dependency to 11.2.0
+* Updates GMA Android dependency to 23.0.0
+
+## 4.0.0
+* The minimum supported Flutter version is now 3.7.0.
+* Removes `visibility_detector` as a dependency, and the workaround added in
+  https://github.com/googleads/googleads-mobile-flutter/pull/610.
+* Adds null checks for Ad Ids for Android in
+  https://github.com/googleads/googleads-mobile-flutter/pull/967
+* Updated Android dependencies in https://github.com/googleads/googleads-mobile-flutter/pull/843
+* Updates GMA iOS dependency to 10.11.0
+* Updates GMA Android dependency to 22.5.0
+
 ## 3.1.0
 * Updates GMA iOS dependency to 10.9.0
 * Adds explicit UMP SDK 2.1.0 dependency for Android.

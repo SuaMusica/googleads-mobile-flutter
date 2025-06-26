@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Build;
 import android.os.Bundle;
 import androidx.annotation.Nullable;
 
@@ -24,11 +25,22 @@ class FlutterRequestAgentProvider {
 
   private void processGameAndNewsTemplateVersions(Context context) {
     try {
-      ApplicationInfo info =
-          context
-              .getApplicationContext()
-              .getPackageManager()
-              .getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+      ApplicationInfo info;
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        info =
+            context
+                .getApplicationContext()
+                .getPackageManager()
+                .getApplicationInfo(
+                    context.getPackageName(),
+                    PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA));
+      } else {
+        info =
+            context
+                .getApplicationContext()
+                .getPackageManager()
+                .getApplicationInfo(context.getPackageName(), PackageManager.GET_META_DATA);
+      }
       Bundle metaData = info.metaData;
       if (metaData != null) {
         gameTemplateVersion = info.metaData.getString(GAME_VERSION_KEY);
