@@ -62,7 +62,8 @@
 @property(readonly) NSString *_Nonnull orientation;
 - (instancetype _Nonnull)initWithFactory:(FLTAdSizeFactory *_Nonnull)factory
                              orientation:(NSString *_Nullable)orientation
-                                   width:(NSNumber *_Nonnull)width;
+                                   width:(NSNumber *_Nonnull)width
+                                 isLarge:(BOOL)isLarge;
 @end
 
 @interface FLTInlineAdaptiveBannerSize : FLTAdSize
@@ -181,6 +182,7 @@
                                      adId:(NSNumber *_Nonnull)adId;
 - (FLTAdSize *_Nullable)getAdSize;
 - (GADBannerView *_Nonnull)bannerView;
+- (BOOL)isCollapsible;
 @end
 
 /**

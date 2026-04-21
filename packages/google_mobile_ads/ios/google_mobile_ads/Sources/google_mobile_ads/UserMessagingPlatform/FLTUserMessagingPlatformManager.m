@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #import "FLTUserMessagingPlatformManager.h"
-#import "../FLTAdUtil.h"
-#import "../FLTNSString.h"
+#import "FLTAdUtil.h"
+#import "FLTNSString.h"
 #import "FLTUserMessagingPlatformReaderWriter.h"
 #include <UserMessagingPlatform/UserMessagingPlatform.h>
 
@@ -87,7 +87,7 @@
                                } else {
                                  result([FlutterError
                                      errorWithCode:[[NSString alloc]
-                                                       initWithInt:error.code]
+                                                       gma_initWithInt:error.code]
                                            message:error.localizedDescription
                                            details:error.domain]);
                                }
@@ -104,7 +104,7 @@
                                      result([FlutterError
                                          errorWithCode:
                                              [[NSString alloc]
-                                                 initWithInt:error.code]
+                                                 gma_initWithInt:error.code]
                                                message:error
                                                            .localizedDescription
                                                details:error.domain]);
@@ -119,7 +119,7 @@
             result(form);
           } else {
             result([FlutterError
-                errorWithCode:[[NSString alloc] initWithInt:loadError.code]
+                errorWithCode:[[NSString alloc] gma_initWithInt:loadError.code]
                       message:loadError.localizedDescription
                       details:loadError.domain]);
           }
@@ -137,7 +137,7 @@
                                       result([FlutterError
                                           errorWithCode:
                                               [[NSString alloc]
-                                                  initWithInt:formError.code]
+                                                  gma_initWithInt:formError.code]
                                                 message:
                                                     formError
                                                         .localizedDescription
@@ -158,7 +158,7 @@
                     result(nil);
                   } else {
                     result([FlutterError
-                        errorWithCode:[[NSString alloc] initWithInt:error.code]
+                        errorWithCode:[[NSString alloc] gma_initWithInt:error.code]
                               message:error.localizedDescription
                               details:error.domain]);
                   }

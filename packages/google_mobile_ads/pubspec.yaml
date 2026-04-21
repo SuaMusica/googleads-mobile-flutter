@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 name: google_mobile_ads
-version: 7.0.0
+version: 8.0.0
 description: Flutter plugin for Google Mobile Ads, supporting
   banner, interstitial (full-screen),  rewarded and native ads
 repository: https://github.com/googleads/googleads-mobile-flutter/tree/main/packages/google_mobile_ads
@@ -48,5 +48,5 @@ dev_dependencies:
 
 
 environment:
-  sdk: ">=3.9.0 <4.0.0"
-  flutter: ">=3.35.1"
+  sdk: ">=3.10.0 <4.0.0"
+  flutter: ">=3.38.1"

@@ -582,11 +582,26 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
                 context,
                 new FlutterAdSize.AdSizeFactory(),
                 call.<String>argument("orientation"),
-                call.<Integer>argument("width"));
+                call.<Integer>argument("width"),
+                /* isLarge = */ false);
         if (AdSize.INVALID.equals(size.size)) {
           result.success(null);
         } else {
           result.success(size.height);
+        }
+        break;
+      case "AdSize#getLargeAnchoredAdaptiveBannerAdSize":
+        final FlutterAdSize.AnchoredAdaptiveBannerAdSize largeSize =
+            new FlutterAdSize.AnchoredAdaptiveBannerAdSize(
+                context,
+                new FlutterAdSize.AdSizeFactory(),
+                call.<String>argument("orientation"),
+                call.<Integer>argument("width"),
+                /* isLarge = */ true);
+        if (AdSize.INVALID.equals(largeSize.size)) {
+          result.success(null);
+        } else {
+          result.success(largeSize.height);
         }
         break;
       case "MobileAds#setAppMuted":
@@ -628,6 +643,23 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
             result.error(
                 Constants.ERROR_CODE_UNEXPECTED_AD_TYPE,
                 "Unexpected ad type for getAdSize: " + ad,
+                null);
+          }
+          break;
+        }
+      case "isCollapsible":
+        {
+          FlutterAd ad = instanceManager.adForId(call.<Integer>argument("adId"));
+          if (ad == null) {
+            result.success(false);
+          } else if (ad instanceof FlutterBannerAd) {
+            result.success(((FlutterBannerAd) ad).isCollapsible());
+          } else if (ad instanceof FlutterAdManagerBannerAd) {
+            result.success(((FlutterAdManagerBannerAd) ad).isCollapsible());
+          } else {
+            result.error(
+                Constants.ERROR_CODE_UNEXPECTED_AD_TYPE,
+                "Unexpected ad type for isCollapsible: " + ad,
                 null);
           }
           break;
