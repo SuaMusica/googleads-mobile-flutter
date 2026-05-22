@@ -708,17 +708,19 @@ class _GoogleMobileAdsHybridPlatformViewLink extends StatelessWidget {
     return PlatformViewLink(
       key: platformViewKey,
       viewType: viewType,
-      surfaceFactory: (
-        BuildContext context,
-        PlatformViewController controller,
-      ) {
-        return AndroidViewSurface(
-          controller: controller as AndroidViewController,
-          gestureRecognizers: const <Factory<OneSequenceGestureRecognizer>>{},
-          hitTestBehavior: PlatformViewHitTestBehavior.opaque,
-        );
-      },
+      surfaceFactory:
+          (BuildContext context, PlatformViewController controller) {
+            return AndroidViewSurface(
+              controller: controller as AndroidViewController,
+              gestureRecognizers:
+                  const <Factory<OneSequenceGestureRecognizer>>{},
+              hitTestBehavior: PlatformViewHitTestBehavior.opaque,
+            );
+          },
       onCreatePlatformView: (PlatformViewCreationParams params) {
+        print(
+          'onCreatePlatformView google_mobile_ads: $useHcpp, $useInitHybridAndroidView',
+        );
         final AndroidViewController controller =
             useHcpp && useInitHybridAndroidView
             ? PlatformViewsService.initHybridAndroidView(
@@ -890,18 +892,18 @@ class _AdWidgetState extends State<AdWidget> {
 
     return switch (defaultTargetPlatform) {
       TargetPlatform.android => _GoogleMobileAdsAndroidPlatformView(
-          viewType: viewType,
-          adId: adId,
-          useHybridComposition: widget.useHybridComposition,
-          useInitHybridAndroidView: widget.useInitHybridAndroidView,
-          hcppSupported: _hcppSupported,
-          platformViewKey: _platformViewKey,
-        ),
+        viewType: viewType,
+        adId: adId,
+        useHybridComposition: widget.useHybridComposition,
+        useInitHybridAndroidView: widget.useInitHybridAndroidView,
+        hcppSupported: _hcppSupported,
+        platformViewKey: _platformViewKey,
+      ),
       _ => UiKitView(
-          viewType: viewType,
-          creationParams: adId,
-          creationParamsCodec: StandardMessageCodec(),
-        ),
+        viewType: viewType,
+        creationParams: adId,
+        creationParamsCodec: StandardMessageCodec(),
+      ),
     };
   }
 }
@@ -1000,18 +1002,18 @@ class _FluidAdWidgetState extends State<FluidAdWidget> {
 
     final Widget platformView = switch (defaultTargetPlatform) {
       TargetPlatform.android => _GoogleMobileAdsAndroidPlatformView(
-          viewType: viewType,
-          adId: adId,
-          useHybridComposition: true,
-          useInitHybridAndroidView: true,
-          hcppSupported: _hcppSupported,
-          platformViewKey: _platformViewKey,
-        ),
+        viewType: viewType,
+        adId: adId,
+        useHybridComposition: true,
+        useInitHybridAndroidView: true,
+        hcppSupported: _hcppSupported,
+        platformViewKey: _platformViewKey,
+      ),
       _ => UiKitView(
-          viewType: viewType,
-          creationParams: adId,
-          creationParamsCodec: StandardMessageCodec(),
-        ),
+        viewType: viewType,
+        creationParams: adId,
+        creationParamsCodec: StandardMessageCodec(),
+      ),
     };
 
     final height = defaultTargetPlatform == TargetPlatform.android
