@@ -718,7 +718,7 @@ class _GoogleMobileAdsHybridPlatformViewLink extends StatelessWidget {
             );
           },
       onCreatePlatformView: (PlatformViewCreationParams params) {
-        print(
+        debugPrint(
           '[_GoogleMobileAdsHybridPlatformViewLink $adId] onCreatePlatformView google_mobile_ads hcpp: $useHcpp, $useInitHybridAndroidView',
         );
         final AndroidViewController controller =
@@ -846,11 +846,11 @@ class _AdWidgetState extends State<AdWidget> {
 
     if (defaultTargetPlatform == TargetPlatform.android &&
         widget.useHybridComposition) {
-      print(
+      debugPrint(
         '[AdWidget ${instanceManager.adIdFor(widget.ad)}] google_mobile_ads init check hcpp',
       );
       HybridAndroidViewController.checkIfSupported().then((supported) {
-        print(
+        debugPrint(
           '[AdWidget ${instanceManager.adIdFor(widget.ad)}] google_mobile_ads init check hcpp: $supported',
         );
         if (mounted) {
