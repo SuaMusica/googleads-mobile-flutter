@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC
+// Copyright 2026 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,9 +17,13 @@ package io.flutter.plugins.googlemobileads;
 import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.google.android.gms.ads.LoadAdError;
-import com.google.android.gms.ads.appopen.AppOpenAd;
-import com.google.android.gms.ads.appopen.AppOpenAd.AppOpenAdLoadCallback;
+import com.google.android.libraries.ads.mobile.sdk.appopen.AppOpenAd;
+import com.google.android.libraries.ads.mobile.sdk.appopen.AppOpenAdEventCallback;
+import com.google.android.gms.ads.AdError;
+import com.google.android.libraries.ads.mobile.sdk.common.AdLoadCallback;
+import com.google.android.libraries.ads.mobile.sdk.common.AdValue;
+import com.google.android.libraries.ads.mobile.sdk.common.FullScreenContentError;
+import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError;
 import io.flutter.util.Preconditions;
 import java.lang.ref.WeakReference;
 
@@ -57,22 +61,20 @@ class FlutterAppOpenAd extends FlutterAd.FlutterOverlayAd {
   void load() {
     if (request != null) {
       flutterAdLoader.loadAppOpen(
-          adUnitId, request.asAdRequest(adUnitId), new DelegatingAppOpenAdLoadCallback(this));
+          request.asAdRequest(adUnitId), new DelegatingAppOpenAdLoadCallback(this));
     } else if (adManagerAdRequest != null) {
       flutterAdLoader.loadAdManagerAppOpen(
-          adUnitId,
           adManagerAdRequest.asAdManagerAdRequest(adUnitId),
           new DelegatingAppOpenAdLoadCallback(this));
     }
   }
 
-  private void onAdLoaded(@NonNull AppOpenAd ad) {
+  void onAdLoaded(@NonNull AppOpenAd ad) {
     this.ad = ad;
-    ad.setOnPaidEventListener(new FlutterPaidEventListener(manager, this));
     manager.onAdLoaded(adId, ad.getResponseInfo());
   }
 
-  private void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+  void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
     manager.onAdFailedToLoad(adId, new FlutterLoadAdError(loadAdError));
   }
 
@@ -86,7 +88,7 @@ class FlutterAppOpenAd extends FlutterAd.FlutterOverlayAd {
       Log.e(TAG, "Tried to show app open ad before activity was bound to the plugin.");
       return;
     }
-    ad.setFullScreenContentCallback(new FlutterFullScreenContentCallback(manager, adId));
+    ad.setAdEventCallback(new DelegatingAppOpenAdLoadCallback(this));
     ad.show(manager.getActivity());
   }
 
@@ -105,7 +107,8 @@ class FlutterAppOpenAd extends FlutterAd.FlutterOverlayAd {
   }
 
   /** An AppOpenAdLoadCallback that just forwards events to a delegate. */
-  private static final class DelegatingAppOpenAdLoadCallback extends AppOpenAdLoadCallback {
+  private static final class DelegatingAppOpenAdLoadCallback
+      implements AdLoadCallback<AppOpenAd>, AppOpenAdEventCallback {
 
     private final WeakReference<FlutterAppOpenAd> delegate;
 
@@ -115,15 +118,72 @@ class FlutterAppOpenAd extends FlutterAd.FlutterOverlayAd {
 
     @Override
     public void onAdLoaded(@NonNull AppOpenAd appOpenAd) {
-      if (delegate.get() != null) {
-        delegate.get().onAdLoaded(appOpenAd);
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.onAdLoaded(appOpenAd);
       }
     }
 
     @Override
     public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
-      if (delegate.get() != null) {
-        delegate.get().onAdFailedToLoad(loadAdError);
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.onAdFailedToLoad(loadAdError);
+      }
+    }
+
+    @Override
+    public void onAdFailedToShowFullScreenContent(@NonNull FullScreenContentError adError) {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onFailedToShowFullScreenContent(
+            ad.adId,
+            new AdError(
+                adError.getCode().getValue(),
+                adError.getMessage(),
+                AdInstanceManager.NEXT_GEN_DOMAIN));
+      }
+    }
+
+    @Override
+    public void onAdShowedFullScreenContent() {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onAdShowedFullScreenContent(ad.adId);
+      }
+    }
+
+    @Override
+    public void onAdDismissedFullScreenContent() {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onAdDismissedFullScreenContent(ad.adId);
+      }
+    }
+
+    @Override
+    public void onAdImpression() {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onAdImpression(ad.adId);
+      }
+    }
+
+    @Override
+    public void onAdClicked() {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onAdClicked(ad.adId);
+      }
+    }
+
+    @Override
+    public void onAdPaid(@NonNull AdValue adValue) {
+      FlutterAppOpenAd ad = delegate.get();
+      if (ad != null) {
+        ad.manager.onPaidEvent(
+            ad,
+            AdInstanceManager.comAdValueToFlutterAdValue(adValue));
       }
     }
   }

@@ -19,15 +19,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
-import com.google.android.gms.ads.AdInspectorError;
 import com.google.android.gms.ads.AdSize;
-import com.google.android.gms.ads.MobileAds;
-import com.google.android.gms.ads.OnAdInspectorClosedListener;
-import com.google.android.gms.ads.RequestConfiguration;
-import com.google.android.gms.ads.initialization.InitializationStatus;
-import com.google.android.gms.ads.initialization.OnInitializationCompleteListener;
-import com.google.android.gms.ads.nativead.NativeAd;
-import com.google.android.gms.ads.nativead.NativeAdView;
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
@@ -40,7 +32,6 @@ import io.flutter.plugin.common.StandardMethodCodec;
 import io.flutter.plugins.googlemobileads.FlutterAd.FlutterOverlayAd;
 import io.flutter.plugins.googlemobileads.nativetemplates.FlutterNativeTemplateStyle;
 import io.flutter.plugins.googlemobileads.usermessagingplatform.UserMessagingPlatformManager;
-import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +58,7 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
   @Nullable private AdMessageCodec adMessageCodec;
   @Nullable private AppStateNotifier appStateNotifier;
   @Nullable private UserMessagingPlatformManager userMessagingPlatformManager;
+  @Nullable private FlutterAdPreloader flutterAdPreloader;
   private final Map<String, NativeAdFactory> nativeAdFactories = new HashMap<>();
 
   @SuppressWarnings("deprecation") // Keeping for compatibility
@@ -74,6 +66,7 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
   private MediationNetworkExtrasProvider mediationNetworkExtrasProvider;
 
   private final FlutterMobileAdsWrapper flutterMobileAds;
+
   /**
    * Public constructor for the plugin. Dependency initialization is handled in lifecycle methods
    * below.
@@ -99,36 +92,17 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
     this.flutterMobileAds = new FlutterMobileAdsWrapper();
   }
 
-  /**
-   * Interface used to display a {@link com.google.android.gms.ads.nativead.NativeAd}.
-   *
-   * <p>Added to a {@link io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin} and creates
-   * {@link com.google.android.gms.ads.nativead.NativeAdView}s from Native Ads created in Dart.
-   */
-  public interface NativeAdFactory {
-    /**
-     * Creates a {@link com.google.android.gms.ads.nativead.NativeAdView} with a {@link
-     * com.google.android.gms.ads.nativead.NativeAd}.
-     *
-     * @param nativeAd Ad information used to create a {@link
-     *     com.google.android.gms.ads.nativead.NativeAd}
-     * @param customOptions Used to pass additional custom options to create the {@link
-     *     com.google.android.gms.ads.nativead.NativeAdView}. Nullable.
-     * @return a {@link com.google.android.gms.ads.nativead.NativeAdView} that is overlaid on top of
-     *     the FlutterView
-     */
-    NativeAdView createNativeAd(NativeAd nativeAd, Map<String, Object> customOptions);
-  }
+
 
   /**
-   * Registers a {@link io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin.NativeAdFactory}
-   * used to create {@link com.google.android.gms.ads.nativead.NativeAdView}s from a Native Ad
+   * Registers a {@link NativeAdFactory}
+   * used to create {@link NativeAdView}s from a Native Ad
    * created in Dart.
    *
    * @param engine maintains access to a GoogleMobileAdsPlugin instance
    * @param factoryId a unique identifier for the ad factory. The Native Ad created in Dart includes
    *     a parameter that refers to this.
-   * @param nativeAdFactory creates {@link com.google.android.gms.ads.nativead.NativeAdView}s when
+   * @param nativeAdFactory creates {@link NativeAdView}s when
    *     Flutter NativeAds are created
    * @return whether the factoryId is unique and the nativeAdFactory was successfully added
    */
@@ -200,15 +174,15 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
   }
 
   /**
-   * Unregisters a {@link io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin.NativeAdFactory}
-   * used to create {@link com.google.android.gms.ads.nativead.NativeAdView}s from a Native Ad
+   * Unregisters a {@link NativeAdFactory}
+   * used to create {@link NativeAdView}s from a Native Ad
    * created in Dart.
    *
    * @param engine maintains access to a GoogleMobileAdsPlugin instance
    * @param factoryId a unique identifier for the ad factory. The Native ad created in Dart includes
    *     a parameter that refers to this
    * @return the previous {@link
-   *     io.flutter.plugins.googlemobileads.GoogleMobileAdsPlugin.NativeAdFactory} associated with
+   *     NativeAdFactory} associated with
    *     this factoryId, or null if there was none for this factoryId
    */
   @Nullable
@@ -264,6 +238,9 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
     userMessagingPlatformManager =
         new UserMessagingPlatformManager(
             binding.getBinaryMessenger(), binding.getApplicationContext());
+    flutterAdPreloader =
+        new FlutterAdPreloader(
+            binding.getApplicationContext(), instanceManager, channel);
   }
 
   @Override
@@ -271,6 +248,9 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
     if (appStateNotifier != null) {
       appStateNotifier.stop();
       appStateNotifier = null;
+    }
+    if (flutterAdPreloader != null) {
+      flutterAdPreloader = null;
     }
   }
 
@@ -334,6 +314,21 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
       Log.e(TAG, "method call received before instanceManager initialized: " + call.method);
       return;
     }
+    if (call.method.equals("MobileAds#startPreloading")
+        || call.method.equals("MobileAds#destroyPreloader")
+        || call.method.equals("MobileAds#destroyAllPreloaders")
+        || call.method.equals("MobileAds#isPreloadedAdAvailable")
+        || call.method.equals("MobileAds#getNumAdsAvailable")
+        || call.method.equals("MobileAds#getPreloadConfiguration")
+        || call.method.equals("MobileAds#getPreloadConfigurations")
+        || call.method.equals("MobileAds#pollAd")) {
+      if (flutterAdPreloader != null) {
+        flutterAdPreloader.onMethodCall(call, result);
+      } else {
+        result.error("PreloadError", "Preloader not initialized", null);
+      }
+      return;
+    }
     // Use activity as context if available.
     Context context =
         (instanceManager.getActivity() != null)
@@ -349,43 +344,13 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
         flutterMobileAds.initialize(context, new FlutterInitializationListener(result));
         break;
       case "MobileAds#openAdInspector":
-        flutterMobileAds.openAdInspector(
-            context,
-            new OnAdInspectorClosedListener() {
-              @Override
-              public void onAdInspectorClosed(@Nullable AdInspectorError adInspectorError) {
-                if (adInspectorError != null) {
-                  String errorCode = Integer.toString(adInspectorError.getCode());
-                  result.error(
-                      errorCode, adInspectorError.getMessage(), adInspectorError.getDomain());
-                } else {
-                  result.success(null);
-                }
-              }
-            });
+        FlutterAdInspector.openAdInspector(context, flutterMobileAds, result);
         break;
       case "MobileAds#getRequestConfiguration":
         result.success(flutterMobileAds.getRequestConfiguration());
         break;
       case "MobileAds#updateRequestConfiguration":
-        RequestConfiguration.Builder builder = MobileAds.getRequestConfiguration().toBuilder();
-        String maxAdContentRating = call.argument("maxAdContentRating");
-        Integer tagForChildDirectedTreatment = call.argument("tagForChildDirectedTreatment");
-        Integer tagForUnderAgeOfConsent = call.argument("tagForUnderAgeOfConsent");
-        List<String> testDeviceIds = call.argument("testDeviceIds");
-        if (maxAdContentRating != null) {
-          builder.setMaxAdContentRating(maxAdContentRating);
-        }
-        if (tagForChildDirectedTreatment != null) {
-          builder.setTagForChildDirectedTreatment(tagForChildDirectedTreatment);
-        }
-        if (tagForUnderAgeOfConsent != null) {
-          builder.setTagForUnderAgeOfConsent(tagForUnderAgeOfConsent);
-        }
-        if (testDeviceIds != null) {
-          builder.setTestDeviceIds(testDeviceIds);
-        }
-        MobileAds.setRequestConfiguration(builder.build());
+        FlutterRequestConfiguration.updateRequestConfiguration(call);
         result.success(null);
         break;
       case "MobileAds#registerWebView":
@@ -691,34 +656,5 @@ public class GoogleMobileAdsPlugin implements FlutterPlugin, ActivityAware, Meth
     return new BannerAdCreator(context);
   }
 
-  /** An {@link OnInitializationCompleteListener} that invokes result.success() at most once. */
-  private static final class FlutterInitializationListener
-      implements OnInitializationCompleteListener {
 
-    private final Result result;
-    private boolean isInitializationCompleted;
-
-    private FlutterInitializationListener(@NonNull final Result result) {
-      this.result = result;
-      isInitializationCompleted = false;
-    }
-
-    @Override
-    public void onInitializationComplete(@NonNull InitializationStatus initializationStatus) {
-      // Make sure not to invoke this more than once, since Dart will throw an exception if success
-      // is invoked more than once. See b/193418432.
-      if (isInitializationCompleted) {
-        return;
-      }
-      try {
-        Class<?> clazz = Class.forName("com.google.android.gms.ads.MobileAds");
-        Method method = clazz.getDeclaredMethod("setPlugin", String.class);
-        method.setAccessible(true);
-        method.invoke(null, Constants.REQUEST_AGENT_PREFIX_VERSIONED);
-      } catch (Exception ignored) {
-      }
-      result.success(new FlutterInitializationStatus(initializationStatus));
-      isInitializationCompleted = true;
-    }
-  }
 }

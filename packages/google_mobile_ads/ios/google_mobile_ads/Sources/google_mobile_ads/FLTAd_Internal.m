@@ -738,6 +738,7 @@
 }
 
 - (void)load {
+
   [GADInterstitialAd
        loadWithAdUnitID:_adUnitId
                 request:[_adRequest asGADRequest:_adUnitId]
@@ -774,6 +775,25 @@
   }
 }
 
+- (void)onAdLoaded:(GADInterstitialAd *_Nonnull)ad {
+  ad.fullScreenContentDelegate = self;
+  self->_interstitialView = ad;
+  __weak FLTInterstitialAd *weakSelf = self;
+  ad.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+    if (weakSelf.manager == nil) {
+      return;
+    }
+    [weakSelf.manager
+        onPaidEvent:weakSelf
+              value:[[FLTAdValue alloc]
+                        initWithValue:value.value
+                            precision:(NSInteger)value.precision
+                         currencyCode:value.currencyCode]];
+  };
+
+  [self.manager onAdLoaded:self responseInfo:ad.responseInfo];
+}
+
 @end
 
 #pragma mark - FLTGAMInterstitialAd
@@ -787,7 +807,7 @@
 - (instancetype)initWithAdUnitId:(NSString *_Nonnull)adUnitId
                          request:(FLTGAMAdRequest *_Nonnull)request
                             adId:(NSNumber *_Nonnull)adId {
-  self = [super init];
+  self = [super initWithAdUnitId:adUnitId request:request adId:adId];
   if (self) {
     self.adId = adId;
     _adRequest = request;
@@ -801,6 +821,7 @@
 }
 
 - (void)load {
+
   [GAMInterstitialAd
       loadWithAdManagerAdUnitID:_adUnitId
                         request:[_adRequest asGAMRequest:_adUnitId]
@@ -829,6 +850,46 @@
               }];
 }
 
+- (void)onAdLoaded:(GADInterstitialAd *_Nonnull)ad {
+  if ([ad isKindOfClass:[GAMInterstitialAd class]]) {
+    GAMInterstitialAd *gamAd = (GAMInterstitialAd *)ad;
+    gamAd.fullScreenContentDelegate = self;
+    gamAd.appEventDelegate = self;
+    self->_insterstitial = gamAd;
+    __weak FLTGAMInterstitialAd *weakSelf = self;
+    gamAd.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+      if (weakSelf.manager == nil) {
+        return;
+      }
+      [weakSelf.manager
+          onPaidEvent:weakSelf
+                value:[[FLTAdValue alloc]
+                          initWithValue:value.value
+                              precision:(NSInteger)value.precision
+                           currencyCode:value.currencyCode]];
+    };
+
+    [self.manager onAdLoaded:self responseInfo:gamAd.responseInfo];
+  } else {
+    ad.fullScreenContentDelegate = self;
+    self->_insterstitial = (GAMInterstitialAd *)ad;
+    __weak FLTGAMInterstitialAd *weakSelf = self;
+    ad.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+      if (weakSelf.manager == nil) {
+        return;
+      }
+      [weakSelf.manager
+          onPaidEvent:weakSelf
+                value:[[FLTAdValue alloc]
+                          initWithValue:value.value
+                              precision:(NSInteger)value.precision
+                           currencyCode:value.currencyCode]];
+    };
+
+    [self.manager onAdLoaded:self responseInfo:ad.responseInfo];
+  }
+}
+
 - (void)show {
   if (self.interstitial) {
     [self.interstitial presentFromRootViewController:nil];
@@ -852,6 +913,7 @@
   GADRewardedAd *_rewardedView;
   FLTAdRequest *_adRequest;
   NSString *_adUnitId;
+  NSString *_preloadId;
 }
 
 - (instancetype)initWithAdUnitId:(NSString *_Nonnull)adUnitId
@@ -937,6 +999,25 @@
   }
 }
 
+- (void)onAdLoaded:(GADRewardedAd *_Nonnull)ad {
+  ad.fullScreenContentDelegate = self;
+  self->_rewardedView = ad;
+  __weak FLTRewardedAd *weakSelf = self;
+  ad.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+    if (weakSelf.manager == nil) {
+      return;
+    }
+    [weakSelf.manager
+        onPaidEvent:weakSelf
+              value:[[FLTAdValue alloc]
+                        initWithValue:value.value
+                            precision:(NSInteger)value.precision
+                         currencyCode:value.currencyCode]];
+  };
+
+  [self.manager onAdLoaded:self responseInfo:ad.responseInfo];
+}
+
 @end
 
 #pragma mark - FLTRewardedInterstitialAd
@@ -944,6 +1025,7 @@
   GADRewardedInterstitialAd *_rewardedInterstitialView;
   FLTAdRequest *_adRequest;
   NSString *_adUnitId;
+  NSString *_preloadId;
 }
 
 - (instancetype)initWithAdUnitId:(NSString *_Nonnull)adUnitId
@@ -1041,6 +1123,7 @@
   GADAppOpenAd *_appOpenAd;
   FLTAdRequest *_adRequest;
   NSString *_adUnitId;
+  NSString *_preloadId;
 }
 
 - (instancetype _Nonnull)initWithAdUnitId:(NSString *_Nonnull)adUnitId
@@ -1105,6 +1188,25 @@
   } else {
     NSLog(@"AppOpenAd failed to show because the ad was not ready.");
   }
+}
+
+- (void)onAdLoaded:(GADAppOpenAd *_Nonnull)ad {
+  ad.fullScreenContentDelegate = self;
+  self->_appOpenAd = ad;
+  __weak FLTAppOpenAd *weakSelf = self;
+  ad.paidEventHandler = ^(GADAdValue *_Nonnull value) {
+    if (weakSelf.manager == nil) {
+      return;
+    }
+    [weakSelf.manager
+        onPaidEvent:weakSelf
+              value:[[FLTAdValue alloc]
+                        initWithValue:value.value
+                            precision:(NSInteger)value.precision
+                         currencyCode:value.currencyCode]];
+  };
+
+  [self.manager onAdLoaded:self responseInfo:ad.responseInfo];
 }
 
 @end

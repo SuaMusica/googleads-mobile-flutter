@@ -1,5 +1,14 @@
 ## Liftoff Monetize Flutter Mediation Adapter Changelog
 
+#### Version 1.5.1 (In progress)
+
+#### Version 1.5.0
+- Updated minimum Flutter version to 3.38.1.
+- Updated to support Google Mobile Ads Flutter Plugin version 8.0.0.
+- Supports [Liftoff Monetize Android adapter version 7.7.2.0](https://github.com/googleads/googleads-mobile-android-mediation/blob/main/ThirdPartyAdapters/liftoffmonetize/CHANGELOG.md#version-7720).
+- Supports [Liftoff Monetize iOS adapter version 7.7.1.0](https://github.com/googleads/googleads-mobile-ios-mediation/blob/main/adapters/LiftoffMonetize/CHANGELOG.md#version-7710).
+- Built and tested with the Google Mobile Ads Flutter Plugin version 8.0.0.
+
 #### Version 1.4.3
 * Supports [Liftoff Monetize Android adapter version 7.6.3.1](https://github.com/googleads/googleads-mobile-android-mediation/blob/main/ThirdPartyAdapters/liftoffmonetize/CHANGELOG.md#version-7631).
 * Supports [Liftoff Monetize iOS adapter version 7.6.3.1](https://github.com/googleads/googleads-mobile-ios-mediation/blob/main/adapters/LiftoffMonetize/CHANGELOG.md#version-7631).
