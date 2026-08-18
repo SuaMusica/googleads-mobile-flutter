@@ -81,6 +81,11 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
     this.bannerAdCreator = bannerAdCreator;
   }
 
+  @NonNull
+  protected BannerAdRequest.Builder createBannerAdRequest(@NonNull List<AdSize> allSizes) {
+    return request.toBannerAdRequestBuilder(adUnitId, allSizes);
+  }
+
   @Override
   public void onAdLoaded() {
     if (bannerAd != null) {
@@ -102,7 +107,7 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
           new AdSize(flutterAdSize.getAdSize().getWidth(), flutterAdSize.getAdSize().getHeight());
       allSizes.add(adSize);
     }
-    BannerAdRequest adRequest = request.toBannerAdRequestBuilder(adUnitId, allSizes).build();
+    BannerAdRequest adRequest = createBannerAdRequest(allSizes).build();
     adView.loadAd(
         adRequest,
         new AdLoadCallback<BannerAd>() {

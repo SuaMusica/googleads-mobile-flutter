@@ -15,6 +15,8 @@
 package io.flutter.plugins.googlemobileads;
 
 import androidx.annotation.NonNull;
+import com.google.android.libraries.ads.mobile.sdk.banner.AdSize;
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest;
 import java.util.List;
 
 /**
@@ -36,5 +38,21 @@ class FlutterAdManagerBannerAd extends FlutterBannerAd {
       FlutterAdManagerAdRequest flutterAdRequest,
       @NonNull BannerAdCreator bannerAdCreator) {
     super(adId, manager, adUnitId, flutterAdRequest, sizes, bannerAdCreator);
+  }
+
+  @Override
+  @NonNull
+  protected BannerAdRequest.Builder createBannerAdRequest(@NonNull List<AdSize> allSizes) {
+    BannerAdRequest.Builder builder = super.createBannerAdRequest(allSizes);
+    if (!allSizes.isEmpty() && allSizes.get(0).getWidth() == 1) {
+      builder.setManualImpressionEnabled(true);
+    }
+    return builder;
+  }
+
+  public void recordImpression() {
+    if (bannerAd != null) {
+      bannerAd.recordManualImpression();
+    }
   }
 }
