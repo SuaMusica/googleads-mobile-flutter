@@ -28,6 +28,7 @@ import io.flutter.plugin.platform.PlatformView;
 import io.flutter.util.Preconditions;
 import java.util.ArrayList;
 import java.util.List;
+import android.util.Log;
 
 /**
  * A wrapper for {@link AdView}.
@@ -81,11 +82,6 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
     this.bannerAdCreator = bannerAdCreator;
   }
 
-  @NonNull
-  protected BannerAdRequest.Builder createBannerAdRequest(@NonNull List<AdSize> allSizes) {
-    return request.toBannerAdRequestBuilder(adUnitId, allSizes);
-  }
-
   @Override
   public void onAdLoaded() {
     if (bannerAd != null) {
@@ -95,6 +91,7 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
 
   @Override
   void load() {
+    Log.d("FlutterBannerAd", "load 00: starting load");
     adView = bannerAdCreator.createAdView();
     final List<AdSize> allSizes = new ArrayList<AdSize>();
     for (int i = 0; i < sizes.size(); i++) {
@@ -107,7 +104,17 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
           new AdSize(flutterAdSize.getAdSize().getWidth(), flutterAdSize.getAdSize().getHeight());
       allSizes.add(adSize);
     }
-    BannerAdRequest adRequest = createBannerAdRequest(allSizes).build();
+    Log.d("FlutterBannerAd", "load 01: allSizes=" + allSizes);
+    BannerAdRequest.Builder builder = request.toBannerAdRequestBuilder(adUnitId, allSizes);
+    Log.d("FlutterBannerAd", "load 02: builder=" + builder);
+    if (!allSizes.isEmpty() && allSizes.get(0).getWidth() == 1) {
+      Log.d("FlutterBannerAd", "load 03: setting manual impression enabled");
+      builder.setManualImpressionEnabled(true);
+      Log.d("FlutterBannerAd", "load 04: manual impression enabled");
+    }
+    Log.d("FlutterBannerAd", "load 05: building adRequest");
+    BannerAdRequest adRequest = builder.build();
+    Log.d("FlutterBannerAd", "load 06: adRequest=" + adRequest);
     adView.loadAd(
         adRequest,
         new AdLoadCallback<BannerAd>() {
@@ -166,5 +173,15 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
       return false;
     }
     return bannerAd.isCollapsible();
+  }
+
+  public void recordImpression() {
+    Log.d("FlutterBannerAd", "recordImpression 01 starting");
+    if (bannerAd != null) {
+      Log.d("FlutterBannerAd", "recordImpression 02 banner ad not null");
+      bannerAd.recordManualImpression();
+      Log.d("FlutterBannerAd", "recordImpression 03 recordManualImpression");
+    }
+    Log.d("FlutterBannerAd", "recordImpression 04 finished");
   }
 }
