@@ -28,7 +28,6 @@ import io.flutter.plugins.googlemobileads.FlutterAd.FlutterAdError;
 import io.flutter.plugins.googlemobileads.FlutterAd.FlutterResponseInfo;
 import java.util.HashMap;
 import java.util.Map;
-import android.util.Log;
 
 /**
  * Maintains reference to ad instances for the {@link
@@ -132,13 +131,9 @@ class AdInstanceManager {
     arguments.put("data", data);
 
     FlutterAd ad = ads.get(adId);
-    Log.d("FlutterBannerAd", "onAppEvent 01 ad=" + ad);
     if (ad != null && ad.getClass() == FlutterAdManagerBannerAd.class) {
-      Log.d("FlutterBannerAd", "onAppEvent 02 ad is FlutterAdManagerBannerAd");
       ((FlutterAdManagerBannerAd) ad).recordImpression();
-      Log.d("FlutterBannerAd", "onAppEvent 03 recordImpression");
     }
-    Log.d("FlutterBannerAd", "onAppEvent 04 finished");
 
     invokeOnAdEvent(arguments);
   }
