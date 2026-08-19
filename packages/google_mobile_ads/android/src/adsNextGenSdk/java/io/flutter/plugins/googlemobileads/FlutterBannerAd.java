@@ -102,7 +102,11 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
           new AdSize(flutterAdSize.getAdSize().getWidth(), flutterAdSize.getAdSize().getHeight());
       allSizes.add(adSize);
     }
-    BannerAdRequest adRequest = request.toBannerAdRequestBuilder(adUnitId, allSizes).build();
+    BannerAdRequest.Builder builder = request.toBannerAdRequestBuilder(adUnitId, allSizes);
+    if (!allSizes.isEmpty() && allSizes.get(0).getWidth() == 1) {
+      builder.setManualImpressionEnabled(true);
+    }
+    BannerAdRequest adRequest = builder.build();
     adView.loadAd(
         adRequest,
         new AdLoadCallback<BannerAd>() {
@@ -161,5 +165,11 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
       return false;
     }
     return bannerAd.isCollapsible();
+  }
+
+  public void recordImpression() {
+    if (bannerAd != null) {
+      bannerAd.recordManualImpression();
+    }
   }
 }
