@@ -15,8 +15,8 @@
 package io.flutter.plugins.googlemobileads;
 
 import android.app.Activity;
-import android.util.Log;
 import androidx.annotation.NonNull;
+import android.util.Log;
 import androidx.annotation.Nullable;
 import com.google.android.libraries.ads.mobile.sdk.banner.AdSize;
 import com.google.android.libraries.ads.mobile.sdk.banner.AdView;
@@ -86,6 +86,24 @@ class FlutterBannerAd extends FlutterAd implements FlutterAdLoadedListener {
     if (bannerAd != null) {
       manager.onAdLoaded(adId, bannerAd.getResponseInfo());
     }
+  }
+
+  /**
+   * Attaches a {@link BannerAd} from {@link
+   * com.google.android.libraries.ads.mobile.sdk.banner.BannerAdPreloader} without a network load.
+   */
+  void attachPreloadedBannerAd(@NonNull BannerAd ad) {
+    adView = bannerAdCreator.createAdView();
+    Activity activity = manager.getActivity();
+    if (activity == null) {
+      Log.e(TAG, "Tried to attach preloaded banner before plugin is attached to an activity.");
+      return;
+    }
+    bannerAd = ad;
+    bannerAd.setAdEventCallback(
+        new FlutterBannerAdListener(adId, manager, FlutterBannerAd.this));
+    adView.registerBannerAd(bannerAd, activity);
+    onAdLoaded();
   }
 
   @Override

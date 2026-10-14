@@ -21,6 +21,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.google.android.libraries.ads.mobile.sdk.appopen.AppOpenAd;
 import com.google.android.libraries.ads.mobile.sdk.appopen.AppOpenAdPreloader;
+import com.google.android.libraries.ads.mobile.sdk.banner.AdSize;
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAd;
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdPreloader;
+import com.google.android.libraries.ads.mobile.sdk.banner.BannerAdRequest;
 import com.google.android.libraries.ads.mobile.sdk.common.AdRequest;
 import com.google.android.libraries.ads.mobile.sdk.common.LoadAdError;
 import com.google.android.libraries.ads.mobile.sdk.common.PreloadCallback;
@@ -32,7 +36,9 @@ import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAd;
 import com.google.android.libraries.ads.mobile.sdk.rewarded.RewardedAdPreloader;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class FlutterAdPreloader {
@@ -65,16 +71,29 @@ class FlutterAdPreloader {
           break;
         }
 
-        AdRequest adRequest;
-        if (request != null) {
-          adRequest = request.asAdRequest(adUnitId);
+        PreloadConfiguration config;
+        if (className.equals("AdManagerBannerAd")) {
+          FlutterAdManagerAdRequest adManagerRequest = call.argument("request");
+          List<FlutterAdSize> sizes = call.argument("sizes");
+          if (adManagerRequest == null || sizes == null || sizes.isEmpty()) {
+            result.error(
+                "PreloadError",
+                "AdManagerBannerAd preloading requires request and sizes.",
+                null);
+            break;
+          }
+          config = buildBannerPreloadConfiguration(adUnitId, adManagerRequest, sizes, bufferSize);
         } else {
-          adRequest = new FlutterAdRequest.Builder().build().asAdRequest(adUnitId);
+          AdRequest adRequest;
+          if (request != null) {
+            adRequest = request.asAdRequest(adUnitId);
+          } else {
+            adRequest = new FlutterAdRequest.Builder().build().asAdRequest(adUnitId);
+          }
+          config = bufferSize != null
+              ? new PreloadConfiguration(adRequest, bufferSize)
+              : new PreloadConfiguration(adRequest);
         }
-
-        PreloadConfiguration config = bufferSize != null
-            ? new PreloadConfiguration(adRequest, bufferSize)
-            : new PreloadConfiguration(adRequest);
 
         PreloadCallback callback = new PreloadCallback() {
           @Override
@@ -114,6 +133,8 @@ class FlutterAdPreloader {
           RewardedAdPreloader.start(preloadId, config, callback);
         } else if (className.equals("AppOpenAd")) {
           AppOpenAdPreloader.start(preloadId, config, callback);
+        } else if (className.equals("AdManagerBannerAd")) {
+          BannerAdPreloader.start(preloadId, config, callback);
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -137,6 +158,8 @@ class FlutterAdPreloader {
           RewardedAdPreloader.destroy(preloadId);
         } else if (className.equals("AppOpenAd")) {
           AppOpenAdPreloader.destroy(preloadId);
+        } else if (className.equals("AdManagerBannerAd")) {
+          BannerAdPreloader.destroy(preloadId);
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -159,6 +182,8 @@ class FlutterAdPreloader {
           RewardedAdPreloader.destroyAll();
         } else if (className.equals("AppOpenAd")) {
           AppOpenAdPreloader.destroyAll();
+        } else if (className.equals("AdManagerBannerAd")) {
+          BannerAdPreloader.destroyAll();
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -183,6 +208,8 @@ class FlutterAdPreloader {
           available = RewardedAdPreloader.isAdAvailable(preloadId);
         } else if (className.equals("AppOpenAd")) {
           available = AppOpenAdPreloader.isAdAvailable(preloadId);
+        } else if (className.equals("AdManagerBannerAd")) {
+          available = BannerAdPreloader.isAdAvailable(preloadId);
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -206,6 +233,8 @@ class FlutterAdPreloader {
           count = RewardedAdPreloader.getNumAdsAvailable(preloadId);
         } else if (className.equals("AppOpenAd")) {
           count = AppOpenAdPreloader.getNumAdsAvailable(preloadId);
+        } else if (className.equals("AdManagerBannerAd")) {
+          count = BannerAdPreloader.getNumAdsAvailable(preloadId);
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -229,6 +258,8 @@ class FlutterAdPreloader {
           config = RewardedAdPreloader.getConfiguration(preloadId);
         } else if (className.equals("AppOpenAd")) {
           config = AppOpenAdPreloader.getConfiguration(preloadId);
+        } else if (className.equals("AdManagerBannerAd")) {
+          config = BannerAdPreloader.getConfiguration(preloadId);
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -251,6 +282,8 @@ class FlutterAdPreloader {
           configs = RewardedAdPreloader.getConfigurations();
         } else if (className.equals("AppOpenAd")) {
           configs = AppOpenAdPreloader.getConfigurations();
+        } else if (className.equals("AdManagerBannerAd")) {
+          configs = BannerAdPreloader.getConfigurations();
         } else {
           result.error("PreloadError", "Unsupported className: " + className, null);
           break;
@@ -325,6 +358,29 @@ class FlutterAdPreloader {
             response = new HashMap<>();
             response.put("adUnitId", adUnitId != null ? adUnitId : "");
           }
+        } else if (className.equals("AdManagerBannerAd")) {
+          BannerAd preloadedAd = BannerAdPreloader.pollAd(preloadId);
+          if (preloadedAd != null) {
+            String adUnitIdArg = call.argument("adUnitId");
+            FlutterAdManagerAdRequest adManagerRequest = call.argument("request");
+            List<FlutterAdSize> sizes = call.argument("sizes");
+            if (adUnitIdArg == null || adManagerRequest == null || sizes == null) {
+              result.error("PreloadError", "Missing banner poll arguments.", null);
+              break;
+            }
+            FlutterAdManagerBannerAd adWrapper =
+                new FlutterAdManagerBannerAd(
+                    adId,
+                    instanceManager,
+                    adUnitIdArg,
+                    sizes,
+                    adManagerRequest,
+                    new BannerAdCreator(context));
+            adWrapper.attachPreloadedBannerAd(preloadedAd);
+            instanceManager.trackAd(adWrapper, adId);
+            response = new HashMap<>();
+            response.put("adUnitId", adUnitIdArg);
+          }
         }
         result.success(response);
         break;
@@ -343,6 +399,32 @@ class FlutterAdPreloader {
                 channel.invokeMethod("onPreloadEvent", arguments);
               }
             });
+  }
+
+  private PreloadConfiguration buildBannerPreloadConfiguration(
+      @NonNull String adUnitId,
+      @NonNull FlutterAdManagerAdRequest request,
+      @NonNull List<FlutterAdSize> sizes,
+      @Nullable Integer bufferSize) {
+    final List<AdSize> allSizes = new ArrayList<>();
+    for (int i = 0; i < sizes.size(); i++) {
+      FlutterAdSize flutterAdSize = sizes.get(i);
+      if (flutterAdSize.getAdSize().isFluid()) {
+        allSizes.add(AdSize.FLUID);
+        continue;
+      }
+      allSizes.add(
+          new AdSize(
+              flutterAdSize.getAdSize().getWidth(), flutterAdSize.getAdSize().getHeight()));
+    }
+    BannerAdRequest.Builder builder = request.toBannerAdRequestBuilder(adUnitId, allSizes);
+    if (!allSizes.isEmpty() && allSizes.get(0).getWidth() == 1) {
+      builder.setManualImpressionEnabled(true);
+    }
+    BannerAdRequest bannerAdRequest = builder.build();
+    return bufferSize != null
+        ? new PreloadConfiguration(bannerAdRequest, bufferSize)
+        : new PreloadConfiguration(bannerAdRequest);
   }
 
   private Map<String, Object> serializeConfig(String preloadId, PreloadConfiguration config) {
