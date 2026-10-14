@@ -20,7 +20,6 @@
 #import "FLTNativeTemplateStyle.h"
 #import "GADTTemplateView.h"
 #import <GoogleMobileAds/GoogleMobileAds.h>
-#import <GoogleMobileAds/GoogleMobileAds_Beta.h>
 #import <UIKit/UIKit.h>
 
 @class FLTAdInstanceManager;
@@ -46,6 +45,12 @@
     (NSNumber *_Nonnull)width;
 - (GADAdSize)currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:
     (NSNumber *_Nonnull)width;
+- (GADAdSize)largePortraitAnchoredAdaptiveBannerAdSizeWithWidth:
+    (NSNumber *_Nonnull)width;
+- (GADAdSize)largeLandscapeAnchoredAdaptiveBannerAdSizeWithWidth:
+    (NSNumber *_Nonnull)width;
+- (GADAdSize)largeAnchoredAdaptiveBannerAdSizeWithWidth:
+    (NSNumber *_Nonnull)width;
 - (GADAdSize)currentOrientationInlineAdaptiveBannerSizeWithWidth:
     (NSNumber *_Nonnull)width;
 - (GADAdSize)portraitOrientationInlineAdaptiveBannerSizeWithWidth:
@@ -60,7 +65,8 @@
 @end
 
 @interface FLTAnchoredAdaptiveBannerSize : FLTAdSize
-@property(readonly) NSString *_Nonnull orientation;
+@property(readonly) NSString *_Nullable orientation;
+@property(readonly) BOOL isLarge;
 - (instancetype _Nonnull)initWithFactory:(FLTAdSizeFactory *_Nonnull)factory
                              orientation:(NSString *_Nullable)orientation
                                    width:(NSNumber *_Nonnull)width

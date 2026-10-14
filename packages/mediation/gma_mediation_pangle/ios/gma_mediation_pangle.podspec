@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'gma_mediation_pangle'
-  s.version          = '4.1.0'
+  s.version          = '4.2.1'
   s.summary          = 'Google Mobile Ads Mediation of Pangle.'
   s.description      = <<-DESC
   Mediation Adapter for Pangle to use with Google Mobile Ads.
@@ -13,10 +13,9 @@ Pod::Spec.new do |s|
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Google LLC' => 'mediation-support@google.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.source_files = 'gma_mediation_pangle/Sources/gma_mediation_pangle/**/*'
   s.dependency 'Flutter'
-  s.dependency 'GoogleMobileAdsMediationPangle', '~> 8.2.0.8.0'
+  s.dependency 'GoogleMobileAdsMediationPangle', '~> 8.3.0.8.0'
   s.platform = :ios, '13.0'
   s.static_framework = true
 

@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'gma_mediation_inmobi'
-  s.version          = '2.3.0'
+  s.version          = '2.3.3'
   s.summary          = 'Google Mobile Ads Mediation of InMobi.'
   s.description      = <<-DESC
 Mediation Adapter for InMobi to use with Google Mobile Ads.
@@ -13,10 +13,9 @@ Mediation Adapter for InMobi to use with Google Mobile Ads.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Google LLC' => 'mediation-support@google.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.source_files = 'gma_mediation_inmobi/Sources/gma_mediation_inmobi/**/*'
   s.dependency 'Flutter'
-  s.dependency 'GoogleMobileAdsMediationInMobi', '~> 11.4.0.0'
+  s.dependency 'GoogleMobileAdsMediationInMobi', '~> 11.4.1.0'
   s.platform = :ios, '13.0'
   s.static_framework = true
 

@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'gma_mediation_unity'
-  s.version          = '1.9.0'
+  s.version          = '1.11.1'
   s.summary          = 'Google Mobile Ads Mediation of Unity Ads.'
   s.description      = <<-DESC
 Mediation Adapter for Unity Ads to use with Google Mobile Ads.
@@ -13,10 +13,9 @@ Mediation Adapter for Unity Ads to use with Google Mobile Ads.
   s.license          = { :file => '../LICENSE' }
   s.author           = { 'Google LLC' => 'mediation-support@google.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
-  s.public_header_files = 'Classes/**/*.h'
+  s.source_files = 'gma_mediation_unity/Sources/gma_mediation_unity/**/*'
   s.dependency 'Flutter'
-  s.dependency 'GoogleMobileAdsMediationUnity', '~>4.19.0.0'
+  s.dependency 'GoogleMobileAdsMediationUnity', '~>4.20.1.0'
   s.platform = :ios, '13.0'
   s.static_framework = true
 

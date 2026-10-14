@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'gma_mediation_moloco'
-  s.version = '3.6.0'
+  s.version = '3.7.1'
   s.summary = 'Google Mobile Ads Mediation of Moloco.'
   s.description      = <<-DESC
   Mediation Adapter for Moloco to use with Google Mobile Ads.
@@ -9,9 +9,9 @@ Pod::Spec.new do |s|
   s.license          = { :file => '../LICENSE' }
   s.author = { 'Google LLC' => 'mediation-support@google.com' }
   s.source           = { :path => '.' }
-  s.source_files = 'Classes/**/*'
+  s.source_files = 'gma_mediation_moloco/Sources/gma_mediation_moloco/**/*'
   s.dependency 'Flutter'
-  s.dependency 'GoogleMobileAdsMediationMoloco', '~> 4.9.0.0'
+  s.dependency 'GoogleMobileAdsMediationMoloco', '~> 4.10.0.0'
   s.platform = :ios, '13.0'
   s.static_framework = true
 

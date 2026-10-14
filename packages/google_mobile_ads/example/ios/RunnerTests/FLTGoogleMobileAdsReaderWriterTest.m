@@ -42,16 +42,21 @@
 @implementation FLTGoogleMobileAdsReaderWriterTest {
   FlutterStandardMessageCodec *_messageCodec;
   FLTGoogleMobileAdsReaderWriter *_readerWriter;
+  id _fltAdUtilMock;
 }
 
 - (void)setUp {
-  id fltAdUtilMock = OCMClassMock([FLTAdUtil class]);
-  OCMStub(ClassMethod([fltAdUtilMock requestAgent]))
+  _fltAdUtilMock = OCMClassMock([FLTAdUtil class]);
+  OCMStub(ClassMethod([_fltAdUtilMock requestAgent]))
       .andReturn(@"request-agent");
   _readerWriter = [[FLTGoogleMobileAdsReaderWriter alloc]
       initWithFactory:[[FLTTestAdSizeFactory alloc] init]];
   _messageCodec =
       [FlutterStandardMessageCodec codecWithReaderWriter:_readerWriter];
+}
+
+- (void)tearDown {
+  [_fltAdUtilMock stopMocking];
 }
 
 - (void)testEncodeDecodeAdSize {
@@ -236,6 +241,67 @@
   FLTAnchoredAdaptiveBannerSize *decodedSize =
       [_messageCodec decode:encodedMessage];
   XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+  XCTAssertFalse(decodedSize.isLarge);
+}
+
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_large_portraitOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(23, 34));
+
+  FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
+  OCMStub([factory largePortraitAnchoredAdaptiveBannerAdSizeWithWidth:@(23)])
+      .andReturn(testAdSize);
+
+  FLTAnchoredAdaptiveBannerSize *size =
+      [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory
+                                                 orientation:@"portrait"
+                                                       width:@(23)
+                                                     isLarge:true];
+  NSData *encodedMessage = [_messageCodec encode:size];
+
+  FLTAnchoredAdaptiveBannerSize *decodedSize =
+      [_messageCodec decode:encodedMessage];
+  XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+  XCTAssertTrue(decodedSize.isLarge);
+}
+
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_large_landscapeOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(34, 45));
+
+  FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
+  OCMStub([factory largeLandscapeAnchoredAdaptiveBannerAdSizeWithWidth:@(34)])
+      .andReturn(testAdSize);
+
+  FLTAnchoredAdaptiveBannerSize *size =
+      [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory
+                                                 orientation:@"landscape"
+                                                       width:@(34)
+                                                     isLarge:true];
+  NSData *encodedMessage = [_messageCodec encode:size];
+
+  FLTAnchoredAdaptiveBannerSize *decodedSize =
+      [_messageCodec decode:encodedMessage];
+  XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+  XCTAssertTrue(decodedSize.isLarge);
+}
+
+- (void)testEncodeDecodeAnchoredAdaptiveBannerAdSize_large_currentOrientation {
+  GADAdSize testAdSize = GADAdSizeFromCGSize(CGSizeMake(45, 56));
+
+  FLTAdSizeFactory *factory = OCMClassMock([FLTAdSizeFactory class]);
+  OCMStub([factory largeAnchoredAdaptiveBannerAdSizeWithWidth:@(45)])
+      .andReturn(testAdSize);
+
+  FLTAnchoredAdaptiveBannerSize *size =
+      [[FLTAnchoredAdaptiveBannerSize alloc] initWithFactory:factory
+                                                 orientation:NULL
+                                                       width:@(45)
+                                                     isLarge:true];
+  NSData *encodedMessage = [_messageCodec encode:size];
+
+  FLTAnchoredAdaptiveBannerSize *decodedSize =
+      [_messageCodec decode:encodedMessage];
+  XCTAssertEqual(decodedSize.size.size.width, testAdSize.size.width);
+  XCTAssertTrue(decodedSize.isLarge);
 }
 
 - (void)testEncodeDecodeSmartBannerAdSize {
@@ -801,6 +867,20 @@
 
 - (GADAdSize)currentOrientationAnchoredAdaptiveBannerAdSizeWithWidth:
     (NSNumber *)width {
+  return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
+}
+
+- (GADAdSize)largePortraitAnchoredAdaptiveBannerAdSizeWithWidth:
+    (NSNumber *)width {
+  return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
+}
+
+- (GADAdSize)largeLandscapeAnchoredAdaptiveBannerAdSizeWithWidth:
+    (NSNumber *)width {
+  return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
+}
+
+- (GADAdSize)largeAnchoredAdaptiveBannerAdSizeWithWidth:(NSNumber *)width {
   return GADAdSizeFromCGSize(CGSizeMake(width.doubleValue, 0));
 }
 @end
